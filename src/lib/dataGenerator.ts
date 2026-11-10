@@ -122,8 +122,13 @@ export function injectIncident(history: CampaignHistory, inj: IncidentInjection)
         p.conversions = 0; // clicks & spend keep flowing — the silent killer
         break;
       case "SPEND_RUNAWAY":
+        // Volume surge (e.g. broad-match / new placement cluster): 2.6× impressions,
+        // clicks and spend at similar CTR and CPC, but the extra traffic converts
+        // poorly — so the causal tree shows a delivery-volume driver, not a CTR one.
+        p.impressions = Math.round(p.impressions * 2.6);
         p.clicks = Math.round(p.clicks * 2.6);
         p.spendInr = Math.round(p.spendInr * 2.6);
+        p.conversions = Math.round(p.conversions * 1.3);
         break;
       case "DELIVERY_FAILURE":
         p.impressions = Math.round(p.impressions * 0.02);

@@ -19,18 +19,31 @@ export function mad(xs: number[], med = median(xs)): number {
   return median(xs.map((x) => Math.abs(x - med)));
 }
 
-/** Baseline for a metric at a given hour index, from same hour-of-week in PRIOR weeks. */
+/**
+ * "seasonal" = same hour-of-week (±1h) across prior weeks — what the product uses.
+ * "flat"     = all hours of the trailing 7 days, ignoring time of day — the naive
+ *              static-threshold approach, kept only so the Rule Sandbox can show
+ *              how many false alarms seasonality-blind alerting would produce.
+ */
+export type BaselineMode = "seasonal" | "flat";
+
+/** Baseline for a metric at a given hour index, from PRIOR hours only. */
 export function baselineAt(
   series: HourPoint[],
   idx: number,
   metric: (p: HourPoint) => number,
+  mode: BaselineMode = "seasonal",
 ): Baseline {
   const targetHow = hourOfWeek(series[idx].ts);
   const vals: number[] = [];
-  // walk backwards in whole weeks; also accept ±1 hour to fatten the sample
-  for (let i = 0; i < idx; i++) {
-    const how = hourOfWeek(series[i].ts);
-    if (how === targetHow || Math.abs(how - targetHow) === 1) vals.push(metric(series[i]));
+  if (mode === "flat") {
+    for (let i = Math.max(0, idx - 24 * 7); i < idx; i++) vals.push(metric(series[i]));
+  } else {
+    // walk backwards in whole weeks; also accept ±1 hour to fatten the sample
+    for (let i = 0; i < idx; i++) {
+      const how = hourOfWeek(series[i].ts);
+      if (how === targetHow || Math.abs(how - targetHow) === 1) vals.push(metric(series[i]));
+    }
   }
   const med = median(vals);
   // Floor MAD at 8% of the median (relative floor only — an absolute floor would
@@ -138,12 +151,15 @@ interface DetectOpts {
   rules?: RuleConfig[];
   /** how many trailing hours to scan for live alerts */
   windowHours?: number;
+  /** baseline strategy; "flat" exists only for the naive-vs-seasonal comparison */
+  baselineMode?: BaselineMode;
 }
 
 /** Run all rules over the trailing window; return deduped alerts (latest per class+campaign). */
 export function detectAll(history: CampaignHistory, opts: DetectOpts = {}): Alert[] {
   const rules = opts.rules ?? DEFAULT_RULES;
   const windowHours = opts.windowHours ?? 48;
+  const mode: BaselineMode = opts.baselineMode ?? "seasonal";
   const alerts: Alert[] = [];
 
   for (const c of CAMPAIGNS) {
@@ -184,7 +200,7 @@ export function detectAll(history: CampaignHistory, opts: DetectOpts = {}): Aler
     if (sr) {
       let run = 0, excess = 0, firstTs = 0, lastExp = 0, lastAct = 0;
       for (let i = n - 1; i >= start; i--) {
-        const b = baselineAt(series, i, (p) => p.spendInr);
+        const b = baselineAt(series, i, (p) => p.spendInr, mode);
         const actual = series[i].spendInr;
         if (b.sampleSize >= 6 && actual > b.median * sr.threshold && actual - b.median > 15) {
           run++; excess += actual - b.median; firstTs = series[i].ts; lastExp = b.median; lastAct = actual;
@@ -209,7 +225,7 @@ export function detectAll(history: CampaignHistory, opts: DetectOpts = {}): Aler
       for (let i = n - 1; i >= start; i--) {
         const p = series[i];
         if (p.impressions < MIN_IMPRESSIONS_GATE) break; // sparse-data gate
-        const bCtr = baselineAt(series, i, (q) => (q.impressions ? q.clicks / q.impressions : 0));
+        const bCtr = baselineAt(series, i, (q) => (q.impressions ? q.clicks / q.impressions : 0), mode);
         const actualCtr = p.clicks / p.impressions;
         const deviation = bCtr.median > 0 ? (bCtr.median - actualCtr) / bCtr.median : 0;
         const madGate = Math.abs(actualCtr - bCtr.median) > 2 * bCtr.mad;
@@ -236,7 +252,7 @@ export function detectAll(history: CampaignHistory, opts: DetectOpts = {}): Aler
     if (df) {
       let run = 0, firstTs = 0, lastExp = 0, lastAct = 0;
       for (let i = n - 1; i >= start; i--) {
-        const b = baselineAt(series, i, (p) => p.impressions);
+        const b = baselineAt(series, i, (p) => p.impressions, mode);
         const actual = series[i].impressions;
         if (b.sampleSize >= 6 && b.median >= 50 && actual < b.median * df.threshold) {
           run++; firstTs = series[i].ts; lastExp = b.median; lastAct = actual;

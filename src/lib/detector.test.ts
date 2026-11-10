@@ -85,3 +85,53 @@ describe("backtest", () => {
     expect(typeof loose.note).toBe("string");
   });
 });
+
+// ---------- research-driven additions ----------
+import { compareBaselines } from "./backtest";
+import { buildCausalTree, diagnoseTree } from "./causalTree";
+import { evaluateEligibility } from "./eligibility";
+import { CAMPAIGNS } from "./dataGenerator";
+
+describe("seasonal vs flat baseline", () => {
+  it("flat (seasonality-blind) baseline produces more false alarms than seasonal", () => {
+    const drift = DEFAULT_RULES.find((r) => r.failureClass === "DRIFT")!;
+    const spend = DEFAULT_RULES.find((r) => r.failureClass === "SPEND_RUNAWAY")!;
+    const d = compareBaselines(drift);
+    const s = compareBaselines(spend);
+    expect(d.flat.firings.length + s.flat.firings.length)
+      .toBeGreaterThan(d.seasonal.firings.length + s.seasonal.firings.length);
+  });
+});
+
+describe("causal tree", () => {
+  it("tracking break → CVR is the driver", () => {
+    const h = injectIncident(generateHistory(42), { campaignId: "c2", failureClass: "TRACKING_BREAK", hours: 4 });
+    const t = buildCausalTree(h.c2, 4);
+    expect(t.find((x) => x.isDriver)?.key).toBe("cvr");
+    expect(diagnoseTree(t)).toContain("conversion path");
+  });
+  it("CTR drift → CTR is the driver", () => {
+    const h = injectIncident(generateHistory(42), { campaignId: "c3", failureClass: "DRIFT", hours: 3 });
+    expect(buildCausalTree(h.c3, 3).find((x) => x.isDriver)?.key).toBe("ctr");
+  });
+  it("spend runaway → impressions (volume) is the driver", () => {
+    const h = injectIncident(generateHistory(42), { campaignId: "c1", failureClass: "SPEND_RUNAWAY", hours: 2 });
+    expect(buildCausalTree(h.c1, 2).find((x) => x.isDriver)?.key).toBe("impressions");
+  });
+  it("delivery failure → impressions down is the driver", () => {
+    const h = injectIncident(generateHistory(42), { campaignId: "c4", failureClass: "DELIVERY_FAILURE", hours: 3 });
+    const d = buildCausalTree(h.c4, 3).find((x) => x.isDriver)!;
+    expect(d.key).toBe("impressions");
+    expect(d.status).toBe("down");
+  });
+});
+
+describe("eligibility gates", () => {
+  it("low-volume brand campaign falls back on conversion rules; others pass", () => {
+    const h = generateHistory(42);
+    const e4 = evaluateEligibility(CAMPAIGNS[3], h.c4);
+    expect(e4.gates.find((g) => g.id === "conversionVolume")!.status).toBe("fallback");
+    const e1 = evaluateEligibility(CAMPAIGNS[0], h.c1);
+    expect(e1.summary).toBe("All rules active");
+  });
+});

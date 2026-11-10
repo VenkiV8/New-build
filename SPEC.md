@@ -1,10 +1,11 @@
-# AdGuard — "On-call for your ad budget"
+# BudgetPager — "On-call for your ad budget"
+(Do NOT use the name "AdGuard": it is an existing ad-blocker company.)
 Anomaly alerting system for ad campaign performance (Media.net APM case, Problem #2).
 
 ## One-paragraph thesis
 SMB advertisers lose money silently: tracking breaks, budgets vanish by 11am, ads get
 disapproved, performance drifts. Existing dashboards make users hunt for problems.
-AdGuard inverts this: it pages you like an on-call system — only when money is at risk,
+BudgetPager inverts this: it pages you like an on-call system — only when money is at risk,
 with a diagnosis and a one-tap fix. Severity is measured in ₹ at risk, not metric deltas.
 
 ## Hard constraints
@@ -14,7 +15,8 @@ with a diagnosis and a one-tap fix. Severity is measured in ₹ at risk, not met
   "AI explanations" are template-generated text.
 - Stack: Vite + React + TypeScript + Tailwind + shadcn/ui + Recharts.
 - Must work on mobile (375px) and desktop. Must load in < 3s.
-- Core logic lives in src/lib/ (types.ts, dataGenerator.ts, detector.ts, backtest.ts)
+- Core logic lives in src/lib/ (types.ts, dataGenerator.ts, detector.ts, backtest.ts,
+  causalTree.ts, eligibility.ts)
   and is NEVER mixed into components. UI imports from lib, never the reverse.
 
 ## Demo data
@@ -30,6 +32,10 @@ with a diagnosis and a one-tap fix. Severity is measured in ₹ at risk, not met
 ## Screens (4)
 ### 1. Incident Inbox (home, route /)
 - Header: advertiser name, "₹ protected this week" stat, alert-budget indicator ("2 of 5 daily alerts used").
+- Campaign health strip: one chip per campaign with evaluateEligibility().summary
+  (e.g. "Brand awareness: 1 rule family on fallback"); click opens a popover listing the 4 gates
+  (data freshness, learning phase, conversion volume, traffic volume) with pass/fallback + detail.
+  This visibly shows WHY a low-volume campaign is not spamming alerts.
 - List of alert cards sorted by ₹ at risk (desc). Card: severity chip (SEV1 red / SEV2 amber / SEV3 grey),
   failure-class icon + label, campaign name, one-line summary ("Conversions = 0 for 3h while 142 clicks
   billed — est. ₹1,340 at risk"), time ago, status (Open / Acked / Resolved).
@@ -40,8 +46,13 @@ with a diagnosis and a one-tap fix. Severity is measured in ₹ at risk, not met
 - Title, severity, ₹ at risk/hour, started-at, affected campaign.
 - Chart: actual metric line vs expected band (median ± 2×MAD from baseline) for last 72h,
   anomalous hours shaded red. Recharts Area + Line.
-- "Why we think this happened" — template-generated cause breakdown (e.g. drop isolated to
-  mobile + one placement) rendered as a small tree/list. Label it clearly as top suspected causes.
+- "Root cause" panel = causal metric tree from buildCausalTree(series, alertWindowHours):
+  CPA → CPC (auction price) & CVR; context row: CTR, impressions, effective CPM, spend.
+  Each node: label, formula (small, muted), actual vs expected, Δ%. Driver node = red ring + "Driver" tag;
+  out-of-band nodes amber; normal nodes grey. Nodes with lowVolume=true show "low volume, not blamed".
+  Under the tree: diagnoseTree(nodes) sentence in bold. Then, smaller, the existing alert.causes list
+  titled "Likely segments (illustrative)".
+- alertWindowHours = hours between alert.startedAt and the last data point (+1), min 1.
 - Action row: primary one-tap action per class (Pause campaign / Cap budget / Open tracking checklist /
   Snooze 24h / Mark expected — "it's Diwali"). Actions update alert status in client state and toast.
   "Mark expected" says the date is added to the campaign's expected-events calendar.
@@ -51,10 +62,18 @@ with a diagnosis and a one-tap fix. Severity is measured in ₹ at risk, not met
   "Would have fired 14× in the last 30 days" + small bar chart of firings by day +
   breakdown line ("11 of 14 coincided with Sunday-night dips → consider hour-of-week baseline ✓").
   Backtest re-runs detector on the stored 30-day history with the chosen threshold. Must feel instant.
+- "Why seasonal baselines" comparison card using compareBaselines(rule): two big numbers side by side,
+  "Seasonality-blind rule: 50 false alarms" vs "BudgetPager: 9", plus "41 false alarms prevented"
+  (values come from the function; for SPEND_RUNAWAY at default threshold they are 50 vs 9).
+  Caption: "Both counted on 30 days of healthy campaigns, so every firing is a false alarm."
 ### 4. Notification Preview (route /notifications)
 - Severity → channel matrix (SEV1: WhatsApp + push, SEV2: push + in-app, SEV3: daily digest).
 - Mock WhatsApp phone frame showing a SEV1 message with [Pause] [View] quick replies.
 - Mock daily-digest email card. Static mocks driven by the latest real alerts in state.
+- "Noise controls" panel (static explanatory UI, no logic needed): incident grouping (if >50% of
+  campaigns break on the same metric in the same hour, send ONE account-level incident), 24h cooldown
+  after Ack unless severity escalates, SEV1 unacknowledged for 30 min escalates to backup contact,
+  "Mark expected" feeds the event calendar so the baseline learns.
 
 ## The 5 failure classes & default rules (see detector.ts — already implemented)
 | Class | Trigger | Default | Severity basis |

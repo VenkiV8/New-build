@@ -1,7 +1,8 @@
 # Project rules (also mirror into .cursor/rules if using Cursor's native agent)
 
 ## What this is
-A client-side demo prototype for a PM case study: anomaly alerting for ad campaigns.
+BudgetPager: a client-side demo prototype for a PM case study, anomaly alerting for ad campaigns.
+Never use the name "AdGuard" anywhere (it is an existing ad-blocker company).
 SPEC.md is the single source of truth. Do not add features that are not in SPEC.md.
 If a request conflicts with SPEC.md, say so instead of silently complying.
 
@@ -10,7 +11,8 @@ Vite + React 18 + TypeScript (strict) + Tailwind + shadcn/ui + Recharts + react-
 No backend, no API calls, no env vars, no keys, no new heavy dependencies without asking.
 
 ## Architecture rules
-- src/lib/ holds all domain logic: types.ts, dataGenerator.ts, detector.ts, backtest.ts.
+- src/lib/ holds all domain logic: types.ts, dataGenerator.ts, detector.ts, backtest.ts,
+  causalTree.ts, eligibility.ts.
   These files are pure TypeScript: no React, no imports from src/components or src/pages.
 - UI components never compute detection logic inline; they call lib functions.
 - All randomness goes through the seeded PRNG in dataGenerator.ts. Never use Math.random().

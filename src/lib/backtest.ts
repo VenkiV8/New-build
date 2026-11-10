@@ -2,7 +2,7 @@
 // "Would have fired 14× in the last 30 days — 9 on Sunday nights."
 
 import type { BacktestResult, CampaignHistory, RuleConfig } from "./types";
-import { detectAll, DEFAULT_RULES } from "./detector";
+import { detectAll, DEFAULT_RULES, type BaselineMode } from "./detector";
 import { generateHistory } from "./dataGenerator";
 
 /**
@@ -12,7 +12,7 @@ import { generateHistory } from "./dataGenerator";
  */
 export function backtestRule(
   rule: RuleConfig,
-  opts: { seed?: number; history?: CampaignHistory } = {},
+  opts: { seed?: number; history?: CampaignHistory; baselineMode?: BaselineMode } = {},
 ): BacktestResult {
   const history = opts.history ?? generateHistory(opts.seed ?? 42);
   const anyCampaign = Object.values(history)[0];
@@ -29,7 +29,7 @@ export function backtestRule(
   for (let end = 24 * 7 + 12; end <= n; end += 6) {
     const slice: CampaignHistory = {};
     for (const [cid, pts] of Object.entries(history)) slice[cid] = pts.slice(0, end);
-    const alerts = detectAll(slice, { rules, windowHours: 12 });
+    const alerts = detectAll(slice, { rules, windowHours: 12, baselineMode: opts.baselineMode });
     for (const a of alerts) {
       const dayKey = `${a.campaignId}-${new Date(a.startedAt).toDateString()}`;
       if (!seen.has(dayKey)) {
@@ -63,4 +63,20 @@ export function backtestRule(
         : `${firings.length} firing(s) in 30 days of clean history. Each would have been a false alarm — tune the threshold until this number matches your tolerance (~1/week is typical).`;
 
   return { firings, perDay, note };
+}
+
+/**
+ * Side-by-side: how often would this rule have fired on 30 days of CLEAN data with
+ * a naive flat baseline vs the seasonal (hour-of-week) baseline? Every firing on
+ * clean data is a false alarm, so the gap is "false alarms prevented".
+ */
+export function compareBaselines(rule: RuleConfig, opts: { seed?: number } = {}) {
+  const history = generateHistory(opts.seed ?? 42);
+  const seasonal = backtestRule(rule, { history, baselineMode: "seasonal" });
+  const flat = backtestRule(rule, { history, baselineMode: "flat" });
+  return {
+    seasonal,
+    flat,
+    falseAlarmsPrevented: Math.max(0, flat.firings.length - seasonal.firings.length),
+  };
 }

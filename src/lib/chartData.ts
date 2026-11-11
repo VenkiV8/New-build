@@ -62,8 +62,43 @@ export function bandSeries(
   return out;
 }
 
+export interface TrackingPoint {
+  ts: number;
+  /** actual conversions summed over the trailing `window` hours */
+  actual: number;
+  /** clicks × campaign baseCvr summed over the trailing `window` hours */
+  expected: number;
+  /** inside the alert window (startedAt → last data point) */
+  anomalous: boolean;
+}
+
+/**
+ * TRACKING_BREAK chart: rolling conversions vs what the billed clicks should
+ * have produced at the campaign's baseline conversion rate. Rolling sums use
+ * the full series, so the first plotted hour already has a full window.
+ */
+export function trackingSeries(
+  series: HourPoint[],
+  baseCvr: number,
+  startedAt: number,
+  hours = 72,
+  window = 4,
+): TrackingPoint[] {
+  const out: TrackingPoint[] = [];
+  for (let i = Math.max(0, series.length - hours); i < series.length; i++) {
+    let actual = 0;
+    let expected = 0;
+    for (let j = Math.max(0, i - window + 1); j <= i; j++) {
+      actual += series[j].conversions;
+      expected += series[j].clicks * baseCvr;
+    }
+    out.push({ ts: series[i].ts, actual, expected, anomalous: series[i].ts >= startedAt });
+  }
+  return out;
+}
+
 /** Contiguous anomalous runs as [firstTs, lastTs] pairs, for shading. */
-export function anomalousRanges(points: BandPoint[]): [number, number][] {
+export function anomalousRanges(points: { ts: number; anomalous: boolean }[]): [number, number][] {
   const ranges: [number, number][] = [];
   for (const p of points) {
     if (!p.anomalous) continue;

@@ -138,7 +138,7 @@ export function diagnoseTree(nodes: TreeNode[]): string {
   const pct = driver.deltaPct >= 999 ? "collapsed" : `${driver.deltaPct > 0 ? "+" : ""}${driver.deltaPct}%`;
   switch (driver.key) {
     case "cvr":
-      return `Conversion rate ${pct} while CPM and CTR are near normal: the ads are working, the conversion path or its tracking is not. Check the pixel first, then the checkout page.`;
+      return `Conversion rate ${pct} while auction price (CPC) and CTR are near normal: the ads are working, the conversion path or its tracking is not. Check the pixel first, then the checkout page.`;
     case "ctr":
       return `CTR ${pct} at normal auction cost: engagement problem. Creative fatigue or a placement-mix shift is the likely cause.`;
     case "cpc":

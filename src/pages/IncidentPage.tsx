@@ -7,8 +7,9 @@ import { SeverityChip } from "@/components/alerts/SeverityChip";
 import { ActionRow } from "@/components/incident/ActionRow";
 import { CausalTreePanel } from "@/components/incident/CausalTreePanel";
 import { MetricBandChart } from "@/components/incident/MetricBandChart";
+import { TrackingBreakChart } from "@/components/incident/TrackingBreakChart";
 import { buildCausalTree, diagnoseTree } from "@/lib/causalTree";
-import { alertWindowHours, bandSeries } from "@/lib/chartData";
+import { alertWindowHours, bandSeries, trackingSeries } from "@/lib/chartData";
 import { CAMPAIGNS } from "@/lib/dataGenerator";
 import { useApp } from "@/state/appContext";
 import { dataEnd, timeAgo } from "@/state/inboxView";
@@ -33,11 +34,15 @@ export default function IncidentPage() {
     if (!alert || !series) return null;
     const windowHours = alertWindowHours(series, alert.startedAt);
     const nodes = buildCausalTree(series, windowHours);
+    const baseCvr = CAMPAIGNS.find((c) => c.id === alert.campaignId)?.baseCvr ?? 0;
     return {
       windowHours,
       nodes,
       diagnosis: diagnoseTree(nodes),
-      points: bandSeries(series, alert.metric, alert.startedAt),
+      chart:
+        alert.failureClass === "TRACKING_BREAK"
+          ? ({ kind: "tracking", points: trackingSeries(series, baseCvr, alert.startedAt) } as const)
+          : ({ kind: "band", points: bandSeries(series, alert.metric, alert.startedAt) } as const),
     };
   }, [alert, series]);
 
@@ -97,7 +102,11 @@ export default function IncidentPage() {
       <ActionRow actions={actionsFor(alert)} status={status} onAction={(a) => applyAction(alert.id, a)} />
 
       <section className="rounded-xl border border-slate-200 bg-white p-4">
-        <MetricBandChart points={view.points} metric={alert.metric} />
+        {view.chart.kind === "tracking" ? (
+          <TrackingBreakChart points={view.chart.points} />
+        ) : (
+          <MetricBandChart points={view.chart.points} metric={alert.metric} />
+        )}
       </section>
 
       <CausalTreePanel

@@ -12,16 +12,8 @@ import {
 } from "recharts";
 import { anomalousRanges, type BandPoint } from "@/lib/chartData";
 import type { Alert } from "@/lib/types";
-import { formatDate, formatDateTime, formatHourTick, formatMetric } from "@/utils/format";
-
-const HOUR = 3_600_000;
-
-// Neutral ink for data, red reserved for the anomaly (status, not a series hue).
-const INK = "#1e293b"; // slate-800
-const MUTED = "#94a3b8"; // slate-400
-const BAND = "#cbd5e1"; // slate-300
-const GRID = "#e2e8f0"; // slate-200
-const ALERT = "#dc2626"; // red-600
+import { formatDateTime, formatMetric } from "@/utils/format";
+import { ALERT, alertOnly, AXIS_TICK, BAND, GRID, HOUR, hourTicks, INK, MUTED, xTickLabel } from "./chartTheme";
 
 type Unit = "inr" | "count" | "pctPoints";
 
@@ -77,19 +69,12 @@ function ChartTooltip({ active, payload, unit }: TipProps) {
 export function MetricBandChart({ points, metric }: { points: BandPoint[]; metric: Alert["metric"] }) {
   const { label, unit } = METRIC_LABELS[metric];
 
-  const rows: Row[] = useMemo(
-    () =>
-      points.map((p, i) => ({
-        ...p,
-        alertActual: p.anomalous || points[i + 1]?.anomalous ? p.actual : null,
-      })),
-    [points],
-  );
+  const rows: Row[] = useMemo(() => {
+    const red = alertOnly(points, (p) => p.actual);
+    return points.map((p, i) => ({ ...p, alertActual: red[i] }));
+  }, [points]);
   const ranges = useMemo(() => anomalousRanges(points), [points]);
-  const ticks = useMemo(
-    () => points.filter((p) => new Date(p.ts).getHours() % 12 === 0).map((p) => p.ts),
-    [points],
-  );
+  const ticks = useMemo(() => hourTicks(points), [points]);
 
   if (points.length === 0) return null;
   const first = points[0].ts;
@@ -121,17 +106,15 @@ export function MetricBandChart({ points, metric }: { points: BandPoint[]; metri
               scale="time"
               domain={[first - HOUR / 2, last + HOUR / 2]}
               ticks={ticks}
-              tickFormatter={(ts: number) =>
-                new Date(ts).getHours() === 0 ? formatDate(ts).replace(",", "") : formatHourTick(ts)
-              }
-              tick={{ fontSize: 11, fill: "#64748b" }}
+              tickFormatter={xTickLabel}
+              tick={AXIS_TICK}
               tickLine={false}
               axisLine={{ stroke: GRID }}
               minTickGap={16}
             />
             <YAxis
               width={48}
-              tick={{ fontSize: 11, fill: "#64748b" }}
+              tick={AXIS_TICK}
               tickLine={false}
               axisLine={false}
               tickFormatter={(v: number) => axisValue(v, unit)}

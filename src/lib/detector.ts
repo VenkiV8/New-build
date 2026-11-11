@@ -108,7 +108,7 @@ function causesFor(fc: FailureClass, campaignId: string): CauseItem[] {
   switch (fc) {
     case "TRACKING_BREAK":
       return [
-        { label: "Checkout page: conversion pixel not firing (site deploy 14:10)", share: a },
+        { label: "Checkout page: conversion pixel not firing after a site deploy", share: a },
         { label: pick(["Mobile Safari sessions", "Payment-gateway redirect flow"]), share: b },
         { label: "All other segments", share: c },
       ];

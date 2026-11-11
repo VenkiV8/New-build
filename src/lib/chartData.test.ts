@@ -1,6 +1,13 @@
 import { describe, expect, it } from "vitest";
-import { alertWindowHours, anomalousRanges, bandSeries, metricAccessor, type BandPoint } from "./chartData";
-import { generateSeededDemo } from "./dataGenerator";
+import {
+  alertWindowHours,
+  anomalousRanges,
+  bandSeries,
+  metricAccessor,
+  trackingSeries,
+  type BandPoint,
+} from "./chartData";
+import { CAMPAIGNS, generateSeededDemo } from "./dataGenerator";
 import { detectAll } from "./detector";
 
 const HOUR = 3_600_000;
@@ -51,6 +58,27 @@ describe("bandSeries", () => {
   it("reports CTR in percent", () => {
     const v = metricAccessor("ctr")({ ts: 0, impressions: 1000, clicks: 12, conversions: 0, spendInr: 0 });
     expect(v).toBeCloseTo(1.2);
+  });
+});
+
+describe("trackingSeries", () => {
+  it("seeded c2 tracking break: rolling actual is 0 while billed clicks should have produced > 3", () => {
+    const tb = byClass("TRACKING_BREAK");
+    expect(tb.campaignId).toBe("c2");
+    const c2 = CAMPAIGNS.find((c) => c.id === "c2")!;
+    const pts = trackingSeries(history.c2, c2.baseCvr, tb.startedAt);
+    expect(pts).toHaveLength(72);
+    const last = pts[pts.length - 1];
+    expect(last.actual).toBe(0);
+    expect(last.expected).toBeGreaterThan(3);
+    expect(pts.filter((p) => p.anomalous)).toHaveLength(4);
+  });
+
+  it("sums the trailing window", () => {
+    const s = [1, 2, 3, 4, 5].map((h) => ({ ts: h * HOUR, impressions: 0, clicks: 10 * h, conversions: h, spendInr: 0 }));
+    const pts = trackingSeries(s, 0.1, Infinity, 72, 4);
+    expect(pts.map((p) => p.actual)).toEqual([1, 3, 6, 10, 14]);
+    expect(pts[4].expected).toBeCloseTo(14);
   });
 });
 

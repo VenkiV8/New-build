@@ -2,13 +2,17 @@ import { formatDate, formatHourTick } from "@/utils/format";
 
 export const HOUR = 3_600_000;
 
-// Neutral ink for data, red reserved for the anomaly (status, not a series hue).
-export const INK = "#1e293b"; // slate-800
-export const SECONDARY = "#64748b"; // slate-500
-export const MUTED = "#94a3b8"; // slate-400
-export const BAND = "#cbd5e1"; // slate-300
-export const GRID = "#e2e8f0"; // slate-200
-export const ALERT = "#dc2626"; // red-600
+// Chart palette. Mirrors the --bp-chart-* / --bp-sev1 tokens in src/index.css
+// (SVG presentation attributes can't reliably read CSS variables).
+export const INK = "#0f1b2d"; // --bp-chart-actual: actual line (navy)
+export const EXPECTED = "#3b82f6"; // --bp-chart-expected: dashed expected line (blue-500)
+export const BAND = "#dbeafe"; // --bp-chart-band: expected band fill (blue-100)
+export const ALERT_FILL = "#fef2f2"; // --bp-chart-alert-fill: alert window (red-50)
+export const ALERT_LINE = "#fca5a5"; // --bp-chart-alert-line: alert window border (red-300)
+export const ALERT = "#dc2626"; // --bp-sev1: actual line inside the alert window
+export const SECONDARY = "#64748b"; // slate-500: axis labels
+export const MUTED = "#94a3b8"; // slate-400: hover cursor
+export const GRID = "#e2e8f0"; // slate-200: grid lines
 
 export const AXIS_TICK = { fontSize: 11, fill: SECONDARY };
 

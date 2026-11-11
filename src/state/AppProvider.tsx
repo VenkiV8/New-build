@@ -1,11 +1,11 @@
 import { useCallback, useMemo, useState, type ReactNode } from "react";
 import { toast } from "sonner";
-import { CAMPAIGNS, generateSeededDemo, injectIncident } from "@/lib/dataGenerator";
+import { CAMPAIGNS, generateSeededDemo } from "@/lib/dataGenerator";
 import { DEFAULT_RULES, detectAll } from "@/lib/detector";
 import type { Alert, AlertStatus, CampaignHistory, FailureClass, RuleConfig } from "@/lib/types";
 import { formatDate, formatInr } from "@/utils/format";
 import { AppContext, type AppState } from "./appContext";
-import { newAlerts, pickInjection, type InjectableClass } from "./injection";
+import { planInjection, type InjectableClass } from "./injection";
 import { exposureStopped, statusForAction } from "./protection";
 
 interface Data {
@@ -38,7 +38,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       if (next === "RESOLVED" && !wasResolved) {
         const stopped = exposureStopped(alert);
         setProtectedInr((p) => p + stopped);
-        toast.success(`${formatInr(stopped)}/day exposure stopped`, {
+        toast.success(`Up to ${formatInr(stopped)}/day exposure stopped`, {
           description: `${action}: ${campaignName(alert.campaignId)}`,
         });
       } else if (next === "SNOOZED") {
@@ -62,24 +62,26 @@ export function AppProvider({ children }: { children: ReactNode }) {
         });
         return;
       }
-      const injection = pickInjection(failureClass, data.alerts);
-      const history = injectIncident(data.history, injection);
-      const alerts = detectAll(history, { rules: data.rules });
-      setData({ ...data, history, alerts });
-
-      const added = newAlerts(data.alerts, alerts).find(
-        (a) => a.failureClass === failureClass && a.campaignId === injection.campaignId,
-      );
-      if (added) {
-        setLastInjectedId(added.id);
-        toast.error(`${added.severity} · ${classLabel(added.failureClass)}: ${campaignName(added.campaignId)}`, {
-          description: `${formatInr(added.inrAtRiskPerHour)}/h at risk. ${added.headline}`,
-        });
-      } else {
-        toast(`${classLabel(failureClass)} already open on ${campaignName(injection.campaignId)}`, {
+      // Plan on a copy first: live data changes only if a new alert is confirmed.
+      const plan = planInjection(failureClass, data.history, data.alerts, data.rules);
+      if (plan.kind === "allOpen") {
+        toast(`${classLabel(failureClass)} already open on ${plan.targets.map(campaignName).join(", ")}`, {
           description: "Reset the demo to inject it again.",
         });
+        return;
       }
+      if (plan.kind === "noSignal") {
+        toast(`No campaign would trip ${classLabel(failureClass)} right now`, {
+          description: `Open incidents on ${plan.targets.map(campaignName).join(", ")} mask it. Reset the demo to inject it again.`,
+        });
+        return;
+      }
+      const { added } = plan;
+      setData({ ...data, history: plan.history, alerts: plan.alerts });
+      setLastInjectedId(added.id);
+      toast.error(`${added.severity} · ${classLabel(added.failureClass)}: ${campaignName(added.campaignId)}`, {
+        description: `${formatInr(added.inrAtRiskPerHour)}/h at risk. ${added.headline}`,
+      });
     },
     [data],
   );

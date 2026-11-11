@@ -3,7 +3,14 @@ import { ChevronRight } from "lucide-react";
 import { cn } from "cn";
 import { CAMPAIGNS } from "@/lib/dataGenerator";
 import type { Alert, AlertStatus } from "@/lib/types";
-import { caughtAfterOnset, failureClassLabel, STATUS_LABELS } from "@/components/alerts/alertMeta";
+import {
+  caughtAfterOnset,
+  failureClassLabel,
+  SEVERITY_EDGE,
+  SEVERITY_TEXT,
+  STATUS_LABELS,
+  STATUS_STYLES,
+} from "@/components/alerts/alertMeta";
 import { FailureClassIcon } from "@/components/alerts/FailureClassIcon";
 import { SeverityChip } from "@/components/alerts/SeverityChip";
 import { formatInr } from "@/utils/format";
@@ -26,7 +33,8 @@ export function AlertCard({ alert, status, startedAgo, fresh, muted }: Props) {
     <Link
       to={`/incident/${encodeURIComponent(alert.id)}`}
       className={cn(
-        "group block rounded-xl border border-slate-200 bg-white p-4 shadow-xs transition-[box-shadow,border-color] duration-700 hover:border-slate-300 hover:shadow-sm focus-visible:ring-2 focus-visible:ring-slate-400 focus-visible:outline-none",
+        "group block rounded-xl border border-slate-200 bg-white p-4 transition-[box-shadow,border-color] duration-700 hover:border-slate-300 focus-visible:ring-2 focus-visible:ring-brand focus-visible:outline-none",
+        SEVERITY_EDGE[alert.severity],
         fresh && "animate-in fade-in slide-in-from-top-3 border-red-300 ring-2 ring-red-200 duration-500",
         (muted || closed) && "bg-slate-50/60",
       )}
@@ -36,7 +44,11 @@ export function AlertCard({ alert, status, startedAgo, fresh, muted }: Props) {
           <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-slate-600">
             <SeverityChip severity={alert.severity} />
             <span className="inline-flex items-center gap-1 font-medium">
-              <FailureClassIcon failureClass={alert.failureClass} className="size-3.5" aria-hidden />
+              <FailureClassIcon
+                failureClass={alert.failureClass}
+                className={cn("size-4", SEVERITY_TEXT[alert.severity])}
+                aria-hidden
+              />
               {failureClassLabel(alert.failureClass)}
             </span>
             <span className="text-slate-400">·</span>
@@ -54,10 +66,7 @@ export function AlertCard({ alert, status, startedAgo, fresh, muted }: Props) {
           </span>
           <span className="text-xs text-slate-500 tabular-nums">{formatInr(alert.inrAtRiskPerHour)}/h at risk</span>
           <span
-            className={cn(
-              "rounded-full px-2 py-0.5 text-xs font-medium",
-              status === "OPEN" ? "bg-slate-900 text-white" : "bg-slate-100 text-slate-600",
-            )}
+            className={cn("rounded-full px-2 py-0.5 text-xs font-medium", STATUS_STYLES[status])}
           >
             {STATUS_LABELS[status]}
           </span>

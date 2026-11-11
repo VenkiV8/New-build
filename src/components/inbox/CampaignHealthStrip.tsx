@@ -26,14 +26,14 @@ export function CampaignHealthStrip({ history }: { history: CampaignHistory }) {
                 <button
                   type="button"
                   className={cn(
-                    "flex min-h-10 max-w-full items-center gap-1.5 rounded-full border bg-white px-3 py-1.5 md:min-h-0 text-left text-xs text-slate-700 shadow-xs focus-visible:ring-2 focus-visible:ring-slate-400 focus-visible:outline-none",
-                    hasFallback ? "border-amber-300 hover:border-amber-400" : "border-slate-200 hover:border-slate-300",
+                    "flex min-h-10 max-w-full items-center gap-1.5 rounded-full border bg-white px-3 py-1.5 md:min-h-0 text-left text-xs text-slate-700 shadow-xs focus-visible:ring-2 focus-visible:ring-brand focus-visible:outline-none",
+                    hasFallback ? "border-sev2/50 hover:border-sev2" : "border-slate-200 hover:border-slate-300",
                   )}
                 >
                   {hasFallback ? (
-                    <CircleAlert className="size-3.5 shrink-0 text-amber-600" aria-hidden />
+                    <CircleAlert className="size-4 shrink-0 text-sev2" aria-hidden />
                   ) : (
-                    <CircleCheck className="size-3.5 shrink-0 text-emerald-600" aria-hidden />
+                    <CircleCheck className="size-4 shrink-0 text-ok" aria-hidden />
                   )}
                   <span>
                     <span className="font-medium">{campaign.name}:</span>{" "}
@@ -50,7 +50,7 @@ export function CampaignHealthStrip({ history }: { history: CampaignHistory }) {
                       <span
                         className={cn(
                           "mt-px h-fit shrink-0 rounded px-1.5 py-0.5 font-medium",
-                          g.status === "pass" ? "bg-emerald-50 text-emerald-700" : "bg-amber-50 text-amber-800",
+                          g.status === "pass" ? "bg-ok/10 text-ok-ink" : "bg-sev2/10 text-sev2-ink",
                         )}
                       >
                         {g.status === "pass" ? "Pass" : "Fallback"}

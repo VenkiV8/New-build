@@ -12,7 +12,20 @@ import {
 } from "recharts";
 import { anomalousRanges, type TrackingPoint } from "@/lib/chartData";
 import { formatDateTime } from "@/utils/format";
-import { ALERT, alertOnly, AXIS_TICK, GRID, HOUR, hourTicks, INK, MUTED, SECONDARY, xTickLabel } from "./chartTheme";
+import {
+  ALERT,
+  ALERT_FILL,
+  ALERT_LINE,
+  alertOnly,
+  AXIS_TICK,
+  EXPECTED,
+  GRID,
+  HOUR,
+  hourTicks,
+  INK,
+  MUTED,
+  xTickLabel,
+} from "./chartTheme";
 
 interface Row extends TrackingPoint {
   alertActual: number | null;
@@ -74,7 +87,7 @@ export function TrackingBreakChart({ points: all }: { points: TrackingPoint[] })
                 aria-pressed={range === r}
                 className={cn(
                   "min-h-10 min-w-10 rounded-md px-2 text-xs font-medium md:min-h-7",
-                  range === r ? "bg-white text-slate-900 shadow-xs" : "text-slate-500 hover:text-slate-900",
+                  range === r ? "bg-white text-brand-ink shadow-xs" : "text-slate-500 hover:text-slate-900",
                 )}
               >
                 {r}h
@@ -84,14 +97,14 @@ export function TrackingBreakChart({ points: all }: { points: TrackingPoint[] })
         </span>
         <span className="flex flex-wrap items-center gap-x-4 gap-y-1">
           <span className="flex items-center gap-1.5">
-            <span className="h-0.5 w-4 rounded-full bg-slate-800" aria-hidden /> Conversions (rolling 4h)
+            <span className="h-0.5 w-4 rounded-full bg-topbar" aria-hidden /> Conversions (rolling 4h)
           </span>
           <span className="flex items-center gap-1.5">
-            <span className="w-4 border-t-2 border-dashed border-slate-500" aria-hidden /> Expected from billed clicks
+            <span className="w-4 border-t-2 border-dashed border-blue-500" aria-hidden /> Expected from billed clicks
             (rolling 4h)
           </span>
           <span className="flex items-center gap-1.5">
-            <span className="h-2.5 w-4 rounded-sm bg-red-600/15 ring-1 ring-red-600/40 ring-inset" aria-hidden />{" "}
+            <span className="h-2.5 w-4 rounded-sm bg-red-50 ring-1 ring-red-300 ring-inset" aria-hidden />{" "}
             Alert window
           </span>
         </span>
@@ -119,20 +132,20 @@ export function TrackingBreakChart({ points: all }: { points: TrackingPoint[] })
                 key={from}
                 x1={from - HOUR / 2}
                 x2={to + HOUR / 2}
-                fill={ALERT}
-                fillOpacity={0.08}
-                stroke={ALERT}
-                strokeOpacity={0.3}
+                fill={ALERT_FILL}
+                fillOpacity={1}
+                stroke={ALERT_LINE}
+                strokeOpacity={1}
                 ifOverflow="hidden"
               />
             ))}
             <Line
               dataKey="expected"
-              stroke={SECONDARY}
+              stroke={EXPECTED}
               strokeWidth={2}
               strokeDasharray="5 4"
               dot={false}
-              activeDot={{ r: 4, fill: SECONDARY, stroke: "#fff", strokeWidth: 2 }}
+              activeDot={{ r: 4, fill: EXPECTED, stroke: "#fff", strokeWidth: 2 }}
               isAnimationActive={false}
             />
             <Line

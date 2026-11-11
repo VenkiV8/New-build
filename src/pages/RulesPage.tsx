@@ -1,4 +1,5 @@
 import { useMemo, useState } from "react";
+import { SlidersHorizontal } from "lucide-react";
 import { BacktestPanel } from "@/components/rules/BacktestPanel";
 import { BaselineComparisonCard } from "@/components/rules/BaselineComparisonCard";
 import { RulesTable } from "@/components/rules/RulesTable";
@@ -54,7 +55,10 @@ export default function RulesPage() {
   return (
     <div className="space-y-5">
       <div>
-        <p className="text-xs font-medium tracking-wide text-slate-500 uppercase">Rule sandbox</p>
+        <p className="flex items-center gap-1.5 text-xs font-medium tracking-wide text-slate-500 uppercase">
+          <SlidersHorizontal className="size-4 text-slate-400" aria-hidden />
+          Rule sandbox
+        </p>
         <h1 className="text-xl font-semibold tracking-tight text-slate-900">Tune a rule before it pages anyone</h1>
         <p className="text-sm text-slate-500">
           Pick a rule and move the slider: fewer false alarms, or more real incidents caught.

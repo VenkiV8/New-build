@@ -13,7 +13,21 @@ import {
 import { anomalousRanges, type BandPoint } from "@/lib/chartData";
 import type { Alert } from "@/lib/types";
 import { formatDateTime, formatMetric } from "@/utils/format";
-import { ALERT, alertOnly, AXIS_TICK, BAND, GRID, HOUR, hourTicks, INK, MUTED, xTickLabel } from "./chartTheme";
+import {
+  ALERT,
+  ALERT_FILL,
+  ALERT_LINE,
+  alertOnly,
+  AXIS_TICK,
+  BAND,
+  EXPECTED,
+  GRID,
+  HOUR,
+  hourTicks,
+  INK,
+  MUTED,
+  xTickLabel,
+} from "./chartTheme";
 
 type Unit = "inr" | "count" | "pctPoints";
 
@@ -85,13 +99,13 @@ export function MetricBandChart({ points, metric }: { points: BandPoint[]; metri
       <figcaption className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-slate-600">
         <span className="font-medium text-slate-900">{label}, last 72h</span>
         <span className="flex items-center gap-1.5">
-          <span className="h-0.5 w-4 rounded-full bg-slate-800" aria-hidden /> Actual
+          <span className="h-0.5 w-4 rounded-full bg-topbar" aria-hidden /> Actual
         </span>
         <span className="flex items-center gap-1.5">
-          <span className="h-2.5 w-4 rounded-sm bg-slate-300/70" aria-hidden /> Expected range (median ± 2×MAD)
+          <span className="h-2.5 w-4 rounded-sm bg-blue-100" aria-hidden /> Expected range (median ± 2×MAD)
         </span>
         <span className="flex items-center gap-1.5">
-          <span className="h-2.5 w-4 rounded-sm bg-red-600/15 ring-1 ring-red-600/40 ring-inset" aria-hidden /> Alert
+          <span className="h-2.5 w-4 rounded-sm bg-red-50 ring-1 ring-red-300 ring-inset" aria-hidden /> Alert
           window
         </span>
       </figcaption>
@@ -124,10 +138,10 @@ export function MetricBandChart({ points, metric }: { points: BandPoint[]; metri
                 key={from}
                 x1={from - HOUR / 2}
                 x2={to + HOUR / 2}
-                fill={ALERT}
-                fillOpacity={0.08}
-                stroke={ALERT}
-                strokeOpacity={0.3}
+                fill={ALERT_FILL}
+                fillOpacity={1}
+                stroke={ALERT_LINE}
+                strokeOpacity={1}
                 ifOverflow="hidden"
               />
             ))}
@@ -135,13 +149,13 @@ export function MetricBandChart({ points, metric }: { points: BandPoint[]; metri
               dataKey="band"
               stroke="none"
               fill={BAND}
-              fillOpacity={0.55}
+              fillOpacity={0.85}
               isAnimationActive={false}
               activeDot={false}
             />
             <Line
               dataKey="expected"
-              stroke={MUTED}
+              stroke={EXPECTED}
               strokeWidth={1}
               strokeDasharray="3 3"
               dot={false}

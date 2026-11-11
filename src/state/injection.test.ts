@@ -1,32 +1,95 @@
 import { describe, expect, it } from "vitest";
-import { detectAll } from "@/lib/detector";
-import { generateHistory, generateSeededDemo, injectIncident } from "@/lib/dataGenerator";
-import { newAlerts, pickInjection } from "./injection";
+import { DEFAULT_RULES, detectAll } from "@/lib/detector";
+import { generateHistory, generateSeededDemo } from "@/lib/dataGenerator";
+import type { CampaignHistory } from "@/lib/types";
+import { newAlerts, pickInjection, planInjection } from "./injection";
 
 describe("pickInjection", () => {
   it("sends a tracking break to c1 when c2 is already broken (seeded demo)", () => {
     const alerts = detectAll(generateSeededDemo());
-    expect(pickInjection("TRACKING_BREAK", alerts).campaignId).toBe("c1");
+    expect(pickInjection("TRACKING_BREAK", alerts)?.campaignId).toBe("c1");
   });
 
   it("sends a tracking break to c2 when c2 is healthy", () => {
     const alerts = detectAll(generateHistory(42));
-    expect(pickInjection("TRACKING_BREAK", alerts).campaignId).toBe("c2");
+    expect(pickInjection("TRACKING_BREAK", alerts)?.campaignId).toBe("c2");
   });
 
-  it("maps spend runaway to c1 and delivery failure to c4", () => {
-    expect(pickInjection("SPEND_RUNAWAY", []).campaignId).toBe("c1");
-    expect(pickInjection("DELIVERY_FAILURE", []).campaignId).toBe("c4");
+  it("routes spend runaway c1 → c3 → c2 and refuses when all three have one", () => {
+    expect(pickInjection("SPEND_RUNAWAY", [])?.campaignId).toBe("c1");
+    // seeded demo already has a spend runaway on c1
+    expect(pickInjection("SPEND_RUNAWAY", detectAll(generateSeededDemo()))?.campaignId).toBe("c3");
+    const sr = (campaignId: string) => ({ campaignId, failureClass: "SPEND_RUNAWAY" }) as never;
+    expect(pickInjection("SPEND_RUNAWAY", [sr("c1"), sr("c3")])?.campaignId).toBe("c2");
+    expect(pickInjection("SPEND_RUNAWAY", [sr("c1"), sr("c3"), sr("c2")])).toBeNull();
+  });
+
+  it("maps delivery failure to c4 and refuses a second one", () => {
+    expect(pickInjection("DELIVERY_FAILURE", [])?.campaignId).toBe("c4");
+    expect(
+      pickInjection("DELIVERY_FAILURE", [{ campaignId: "c4", failureClass: "DELIVERY_FAILURE" } as never]),
+    ).toBeNull();
   });
 });
 
-describe("inject on the seeded demo", () => {
-  it.each(["TRACKING_BREAK", "DELIVERY_FAILURE"] as const)("%s produces a new alert", (fc) => {
+describe("planInjection on the seeded demo", () => {
+  const seeded = () => {
     const history = generateSeededDemo();
-    const before = detectAll(history);
-    const inj = pickInjection(fc, before);
-    const after = detectAll(injectIncident(history, inj));
-    const added = newAlerts(before, after);
-    expect(added.some((a) => a.failureClass === fc && a.campaignId === inj.campaignId)).toBe(true);
+    return { history, alerts: detectAll(history, { rules: DEFAULT_RULES }) };
+  };
+
+  it.each([
+    ["TRACKING_BREAK", "c1"],
+    ["DELIVERY_FAILURE", "c4"],
+    ["SPEND_RUNAWAY", "c2"], // c1 already has one; c3's seeded drift masks a spend surge
+  ] as const)("%s produces a new alert on %s", (fc, cid) => {
+    const { history, alerts } = seeded();
+    const plan = planInjection(fc, history, alerts, DEFAULT_RULES);
+    expect(plan.kind).toBe("ok");
+    if (plan.kind !== "ok") return;
+    expect(plan.injection.campaignId).toBe(cid);
+    expect(plan.added.failureClass).toBe(fc);
+  });
+
+  it("never mutates the input history", () => {
+    const { history, alerts } = seeded();
+    const before = JSON.stringify(history.c1);
+    planInjection("SPEND_RUNAWAY", history, alerts, DEFAULT_RULES);
+    planInjection("TRACKING_BREAK", history, alerts, DEFAULT_RULES);
+    expect(JSON.stringify(history.c1)).toBe(before);
+  });
+
+  it("keeps c1 untouched when it already has a spend runaway (no 406% → 1056%)", () => {
+    const { history, alerts } = seeded();
+    const plan = planInjection("SPEND_RUNAWAY", history, alerts, DEFAULT_RULES);
+    if (plan.kind !== "ok") throw new Error("expected ok");
+    expect(plan.history.c1).toBe(history.c1);
+    const c1 = plan.alerts.find((a) => a.campaignId === "c1" && a.failureClass === "SPEND_RUNAWAY");
+    expect(c1?.headline).toContain("406%");
+  });
+
+  it("on clean data, spend runaway goes c1 → c3 → c2, then reports all open", () => {
+    let history: CampaignHistory = generateHistory(42);
+    let alerts = detectAll(history, { rules: DEFAULT_RULES });
+    const hit: string[] = [];
+    for (let i = 0; i < 4; i++) {
+      const plan = planInjection("SPEND_RUNAWAY", history, alerts, DEFAULT_RULES);
+      if (plan.kind !== "ok") {
+        expect(plan.kind).toBe("allOpen");
+        break;
+      }
+      expect(newAlerts(alerts, plan.alerts).length).toBeGreaterThan(0);
+      hit.push(plan.injection.campaignId);
+      ({ history, alerts } = plan);
+    }
+    expect(hit).toEqual(["c1", "c3", "c2"]);
+  });
+
+  it("on the seeded demo, a second spend runaway click reports all open (c3 masked)", () => {
+    const { history, alerts } = seeded();
+    const first = planInjection("SPEND_RUNAWAY", history, alerts, DEFAULT_RULES);
+    if (first.kind !== "ok") throw new Error("expected ok");
+    const second = planInjection("SPEND_RUNAWAY", first.history, first.alerts, DEFAULT_RULES);
+    expect(second.kind).toBe("noSignal");
   });
 });

@@ -8,7 +8,7 @@ import { InboxHeader } from "@/components/inbox/InboxHeader";
 import { TryThisStrip } from "@/components/inbox/TryThisStrip";
 import { useFreshIds } from "@/hooks/useFreshIds";
 import { useApp } from "@/state/appContext";
-import { dataEnd, mostRecentOpen, splitByAlertBudget, timeAgo } from "@/state/inboxView";
+import { dataEnd, mostRecentOpen, sortForInbox, splitByAlertBudget, timeAgo } from "@/state/inboxView";
 import { atRiskNow } from "@/state/protection";
 
 const ADVERTISER = "Arjun's skincare D2C";
@@ -20,7 +20,11 @@ export default function InboxPage() {
     () => mostRecentOpen(alerts, statuses, lastInjectedId),
     [alerts, statuses, lastInjectedId],
   );
-  const { paged, digest } = useMemo(() => splitByAlertBudget(alerts), [alerts]);
+  // Alert budget picks the top 5 by ₹; display then sinks settled alerts below open ones.
+  const { paged, digest } = useMemo(() => {
+    const split = splitByAlertBudget(alerts);
+    return { paged: sortForInbox(split.paged, statuses), digest: sortForInbox(split.digest, statuses) };
+  }, [alerts, statuses]);
   const risk = useMemo(() => atRiskNow(alerts, statuses), [alerts, statuses]);
   const fresh = useFreshIds(alerts);
 
@@ -53,7 +57,7 @@ export default function InboxPage() {
 
       {alerts.length === 0 ? (
         <section className="flex flex-col items-center gap-2 rounded-xl border border-slate-200 bg-white px-6 py-12 text-center">
-          <ShieldCheck className="size-8 text-emerald-600" aria-hidden />
+          <ShieldCheck className="size-8 text-ok" aria-hidden />
           <p className="text-base font-semibold text-slate-900">All {CAMPAIGNS.length} campaigns healthy ✓</p>
           <p className="text-sm text-slate-500">No money at risk right now.</p>
         </section>

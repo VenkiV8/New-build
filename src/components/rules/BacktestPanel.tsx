@@ -86,7 +86,7 @@ export function BacktestPanel({
             <button
               type="button"
               onClick={() => onValueChange(defaultValue)}
-              className="min-h-10 text-xs text-slate-600 underline underline-offset-2 hover:text-slate-900 md:min-h-0"
+              className="min-h-10 text-xs text-brand underline underline-offset-2 hover:text-brand-ink md:min-h-0"
             >
               Reset to default ({slider.format(defaultValue)})
             </button>

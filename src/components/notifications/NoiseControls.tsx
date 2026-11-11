@@ -1,4 +1,4 @@
-import { BellOff, CalendarCheck, Layers, PhoneForwarded } from "lucide-react";
+import { BellOff, CalendarCheck, Funnel, Layers, PhoneForwarded } from "lucide-react";
 
 const CONTROLS = [
   {
@@ -26,7 +26,10 @@ const CONTROLS = [
 export function NoiseControls() {
   return (
     <section aria-label="Noise controls" className="rounded-xl border border-slate-200 bg-white p-4">
-      <h2 className="mb-3 text-base font-semibold text-slate-900">Noise controls</h2>
+      <h2 className="mb-3 flex items-center gap-1.5 text-base font-semibold text-slate-900">
+        <Funnel className="size-4 text-slate-400" aria-hidden />
+        Noise controls
+      </h2>
       <ul className="grid gap-4 sm:grid-cols-2">
         {CONTROLS.map(({ icon: Icon, title, body }) => (
           <li key={title} className="flex gap-3">

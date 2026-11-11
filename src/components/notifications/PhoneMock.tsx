@@ -38,7 +38,7 @@ export function PhoneMock({ alert, paused, onPause }: Props) {
             {alert ? (
               <>
                 <div className="rounded-lg rounded-tl-none bg-white p-3 text-[13px] leading-snug text-slate-800 shadow-sm">
-                  <p className="font-semibold text-red-700">
+                  <p className="font-semibold text-sev1-ink">
                     {alert.severity} · {failureClassLabel(alert.failureClass)}
                   </p>
                   <p className="font-medium">{campaign}</p>
@@ -55,12 +55,12 @@ export function PhoneMock({ alert, paused, onPause }: Props) {
                     <button
                       type="button"
                       onClick={onPause}
-                      className="min-h-10 rounded-lg bg-white text-[13px] font-medium text-sky-700 shadow-sm hover:bg-slate-50 active:bg-slate-100"
+                      className="min-h-10 rounded-lg bg-white text-[13px] font-medium text-brand-ink shadow-sm hover:bg-slate-50 active:bg-slate-100"
                     >
                       Pause
                     </button>
                   )}
-                  <span className="flex min-h-10 items-center justify-center rounded-lg bg-white text-[13px] font-medium text-sky-700 shadow-sm">
+                  <span className="flex min-h-10 items-center justify-center rounded-lg bg-white text-[13px] font-medium text-brand-ink shadow-sm">
                     View
                   </span>
                 </div>
@@ -77,7 +77,7 @@ export function PhoneMock({ alert, paused, onPause }: Props) {
         <p className="text-center text-sm">
           <Link
             to={`/incident/${encodeURIComponent(alert.id)}`}
-            className="inline-flex min-h-10 items-center text-slate-600 underline underline-offset-2 hover:text-slate-900 md:min-h-0"
+            className="inline-flex min-h-10 items-center text-brand underline underline-offset-2 hover:text-brand-ink md:min-h-0"
           >
             Open this incident
           </Link>

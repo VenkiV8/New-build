@@ -1,3 +1,4 @@
+import { GitBranch } from "lucide-react";
 import { cn } from "cn";
 import type { NodeKey, TreeNode } from "@/lib/causalTree";
 import type { CauseItem } from "@/lib/types";
@@ -11,12 +12,12 @@ function deltaLabel(d: number): string {
 function NodeCard({ node }: { node: TreeNode }) {
   const outOfBand = node.status !== "normal";
   const tone = node.isDriver
-    ? "border-red-300 ring-2 ring-red-500"
+    ? "border-red-600 bg-red-50 ring-2 ring-red-600"
     : node.lowVolume
       ? "border-dashed border-slate-300"
       : outOfBand
-        ? "border-amber-300 bg-amber-50/50"
-        : "border-slate-200";
+        ? "border-amber-300 bg-amber-50"
+        : "border-slate-200 bg-white";
 
   return (
     <div className={cn("min-w-0 rounded-lg border bg-white p-3", tone)}>
@@ -66,7 +67,10 @@ export function CausalTreePanel({ nodes, diagnosis, causes, windowHours }: Props
   return (
     <section id="root-cause" aria-label="Root cause" className="scroll-mt-28 space-y-4 md:scroll-mt-20 rounded-xl border border-slate-200 bg-white p-4">
       <div>
-        <h2 className="text-base font-semibold text-slate-900">Root cause</h2>
+        <h2 className="flex items-center gap-1.5 text-base font-semibold text-slate-900">
+          <GitBranch className="size-4 text-slate-400" aria-hidden />
+          Root cause
+        </h2>
         <p className="text-xs text-slate-500">
           Last {windowHours}h vs the same hours in prior weeks. Actual vs expected, Δ%.
         </p>

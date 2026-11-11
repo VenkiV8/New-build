@@ -1,4 +1,5 @@
 import { useMemo, useState } from "react";
+import { BellRing } from "lucide-react";
 import { ChannelMatrix } from "@/components/notifications/ChannelMatrix";
 import { DigestEmailMock } from "@/components/notifications/DigestEmailMock";
 import { NoiseControls } from "@/components/notifications/NoiseControls";
@@ -27,7 +28,10 @@ export default function NotificationsPage() {
   return (
     <div className="space-y-5">
       <div>
-        <p className="text-xs font-medium tracking-wide text-slate-500 uppercase">Notification preview</p>
+        <p className="flex items-center gap-1.5 text-xs font-medium tracking-wide text-slate-500 uppercase">
+          <BellRing className="size-4 text-slate-400" aria-hidden />
+          Notification preview
+        </p>
         <h1 className="text-xl font-semibold tracking-tight text-slate-900">How each incident reaches you</h1>
         <p className="text-sm text-slate-500">Built from the incidents currently in your inbox.</p>
       </div>

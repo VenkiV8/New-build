@@ -28,7 +28,7 @@ export function RulesTable({ rules, selected, onSelect, onToggle }: Props) {
         {rules.map((r) => {
           const isSelected = r.failureClass === selected;
           return (
-            <li key={r.failureClass} className={cn("flex items-center gap-3 px-4 py-1", isSelected && "bg-slate-50")}>
+            <li key={r.failureClass} className={cn("flex items-center gap-3 px-4 py-1", isSelected && "bg-brand/5")}>
               <button
                 type="button"
                 onClick={() => onSelect(r.failureClass)}
@@ -41,7 +41,7 @@ export function RulesTable({ rules, selected, onSelect, onToggle }: Props) {
               >
                 <span className="flex items-center gap-2 font-medium text-slate-900">
                   <span
-                    className={cn("h-4 w-0.5 rounded-full", isSelected ? "bg-slate-900" : "bg-transparent")}
+                    className={cn("h-4 w-0.5 rounded-full", isSelected ? "bg-brand" : "bg-transparent")}
                     aria-hidden
                   />
                   <FailureClassIcon failureClass={r.failureClass} className="size-4 text-slate-500" aria-hidden />

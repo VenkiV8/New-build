@@ -1,13 +1,28 @@
 @import "tailwindcss";
 @import "tw-animate-css";
 @import "shadcn/tailwind.css";
-@import "@fontsource-variable/geist";
+@import "@fontsource/ibm-plex-sans/400.css";
+@import "@fontsource/ibm-plex-sans/500.css";
+@import "@fontsource/ibm-plex-sans/600.css";
 
 @custom-variant dark (&:is(.dark *));
 
 @theme inline {
     --font-heading: var(--font-sans);
-    --font-sans: 'Geist Variable', sans-serif;
+    --font-sans: 'IBM Plex Sans', ui-sans-serif, system-ui, sans-serif;
+    /* BudgetPager tokens (values in :root) */
+    --color-topbar: var(--bp-topbar);
+    --color-brand: var(--bp-accent);
+    --color-brand-ink: var(--bp-accent-ink);
+    --color-brand-line: var(--bp-accent-line);
+    --color-sev1: var(--bp-sev1);
+    --color-sev1-ink: var(--bp-sev1-ink);
+    --color-sev2: var(--bp-sev2);
+    --color-sev2-ink: var(--bp-sev2-ink);
+    --color-sev3: var(--bp-sev3);
+    --color-sev3-ink: var(--bp-sev3-ink);
+    --color-ok: var(--bp-ok);
+    --color-ok-ink: var(--bp-ok-ink);
     --color-sidebar-ring: var(--sidebar-ring);
     --color-sidebar-border: var(--sidebar-border);
     --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
@@ -49,14 +64,37 @@
 }
 
 :root {
+    /* ---- BudgetPager palette: calm ops console ----
+       Base colours are used for fills, borders, icons and chart marks.
+       "-ink" variants are the same hue, darkened so small text on a 10% tint
+       of the base colour still meets WCAG AA (4.5:1). */
+    --bp-topbar: #0f1b2d;
+    --bp-accent: #2563eb;
+    --bp-accent-ink: #1d4ed8;
+    --bp-accent-line: #3b82f6;
+    --bp-sev1: #dc2626;
+    --bp-sev1-ink: #b91c1c;
+    --bp-sev2: #d97706;
+    --bp-sev2-ink: #92400e;
+    --bp-sev3: #64748b;
+    --bp-sev3-ink: #475569;
+    --bp-ok: #16a34a;
+    --bp-ok-ink: #166534;
+    /* charts (mirrored as hex in src/components/incident/chartTheme.ts for SVG attributes) */
+    --bp-chart-actual: #0f1b2d;
+    --bp-chart-band: #dbeafe;
+    --bp-chart-alert-fill: #fef2f2;
+    --bp-chart-alert-line: #fca5a5;
+    --bp-chart-expected: #3b82f6;
+
     --background: oklch(1 0 0);
     --foreground: oklch(0.145 0 0);
     --card: oklch(1 0 0);
     --card-foreground: oklch(0.145 0 0);
     --popover: oklch(1 0 0);
     --popover-foreground: oklch(0.145 0 0);
-    --primary: oklch(0.205 0 0);
-    --primary-foreground: oklch(0.985 0 0);
+    --primary: var(--bp-accent);
+    --primary-foreground: #ffffff;
     --secondary: oklch(0.97 0 0);
     --secondary-foreground: oklch(0.205 0 0);
     --muted: oklch(0.97 0 0);
@@ -66,7 +104,7 @@
     --destructive: oklch(0.577 0.245 27.325);
     --border: oklch(0.922 0 0);
     --input: oklch(0.922 0 0);
-    --ring: oklch(0.708 0 0);
+    --ring: var(--bp-accent);
     --chart-1: oklch(0.87 0 0);
     --chart-2: oklch(0.556 0 0);
     --chart-3: oklch(0.439 0 0);
@@ -123,6 +161,8 @@
     }
   body {
     @apply bg-background text-foreground;
+    /* ₹ amounts and metric numbers line up in columns */
+    font-variant-numeric: tabular-nums;
     }
   html {
     @apply font-sans;

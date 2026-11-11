@@ -1,19 +1,32 @@
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { ArrowLeft } from "lucide-react";
-import { caughtAfterOnset, failureClassLabel, STATUS_LABELS } from "@/components/alerts/alertMeta";
+import { cn } from "cn";
+import {
+  caughtAfterOnset,
+  failureClassLabel,
+  SEVERITY_TEXT,
+  STATUS_LABELS,
+  STATUS_STYLES,
+} from "@/components/alerts/alertMeta";
 import { FailureClassIcon } from "@/components/alerts/FailureClassIcon";
 import { SeverityChip } from "@/components/alerts/SeverityChip";
 import { ActionRow } from "@/components/incident/ActionRow";
 import { CausalTreePanel } from "@/components/incident/CausalTreePanel";
 import { MetricBandChart } from "@/components/incident/MetricBandChart";
 import { TrackingBreakChart } from "@/components/incident/TrackingBreakChart";
+import { TrackingChecklistDialog } from "@/components/incident/TrackingChecklistDialog";
 import { buildCausalTree, diagnoseTree } from "@/lib/causalTree";
 import { alertWindowHours, bandSeries, trackingSeries } from "@/lib/chartData";
 import { CAMPAIGNS } from "@/lib/dataGenerator";
 import { useApp } from "@/state/appContext";
 import { dataEnd, timeAgo } from "@/state/inboxView";
-import { actionsFor } from "@/state/protection";
+import {
+  actionsFor,
+  exposureStopped,
+  MARK_FIXED_ACTION,
+  TRACKING_CHECKLIST_ACTION,
+} from "@/state/protection";
 import { formatDateTime, formatInr } from "@/utils/format";
 
 function BackLink() {
@@ -27,6 +40,7 @@ function BackLink() {
 export default function IncidentPage() {
   const { id } = useParams();
   const { history, alerts, statuses, applyAction } = useApp();
+  const [checklistOpen, setChecklistOpen] = useState(false);
   const alert = alerts.find((a) => a.id === id);
   const series = alert ? history[alert.campaignId] : undefined;
 
@@ -69,10 +83,14 @@ export default function IncidentPage() {
         <div className="flex flex-wrap items-center gap-2 text-xs text-slate-600">
           <SeverityChip severity={alert.severity} />
           <span className="inline-flex items-center gap-1 font-medium">
-            <FailureClassIcon failureClass={alert.failureClass} className="size-3.5" aria-hidden />
+            <FailureClassIcon
+              failureClass={alert.failureClass}
+              className={cn("size-4", SEVERITY_TEXT[alert.severity])}
+              aria-hidden
+            />
             {failureClassLabel(alert.failureClass)}
           </span>
-          <span className="rounded-full bg-slate-100 px-2 py-0.5 font-medium">{STATUS_LABELS[status]}</span>
+          <span className={cn("rounded-full px-2 py-0.5 font-medium", STATUS_STYLES[status])}>{STATUS_LABELS[status]}</span>
         </div>
         <div>
           <h1 className="text-xl font-semibold tracking-tight text-slate-900">{alert.headline}</h1>
@@ -99,7 +117,24 @@ export default function IncidentPage() {
         <p className="text-sm text-slate-600">{alert.explanation}</p>
       </header>
 
-      <ActionRow actions={actionsFor(alert)} status={status} onAction={(a) => applyAction(alert.id, a)} />
+      <ActionRow
+        actions={actionsFor(alert)}
+        status={status}
+        onAction={(a) => {
+          // The checklist acknowledges (no ₹ credit); "Mark fixed" inside it resolves.
+          if (a === TRACKING_CHECKLIST_ACTION) setChecklistOpen(true);
+          applyAction(alert.id, a);
+        }}
+      />
+      {alert.failureClass === "TRACKING_BREAK" && (
+        <TrackingChecklistDialog
+          open={checklistOpen}
+          onOpenChange={setChecklistOpen}
+          onMarkFixed={() => applyAction(alert.id, MARK_FIXED_ACTION)}
+          campaign={campaign}
+          creditInr={exposureStopped(alert)}
+        />
+      )}
 
       <section className="rounded-xl border border-slate-200 bg-white p-4">
         {view.chart.kind === "tracking" ? (

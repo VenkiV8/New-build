@@ -1,4 +1,4 @@
-import { BatteryLow, EyeOff, Flame, TrendingDown, Unplug, type LucideProps } from "lucide-react";
+import { Flame, Hourglass, TrendingDown, Unplug, WifiOff, type LucideProps } from "lucide-react";
 import type { FailureClass } from "@/lib/types";
 
 export function FailureClassIcon({ failureClass, ...props }: { failureClass: FailureClass } & LucideProps) {
@@ -10,8 +10,8 @@ export function FailureClassIcon({ failureClass, ...props }: { failureClass: Fai
     case "DRIFT":
       return <TrendingDown {...props} />;
     case "DELIVERY_FAILURE":
-      return <EyeOff {...props} />;
+      return <WifiOff {...props} />;
     case "BUDGET_EXHAUST":
-      return <BatteryLow {...props} />;
+      return <Hourglass {...props} />;
   }
 }

@@ -7,7 +7,7 @@ import { X } from "lucide-react";
 let dismissedThisSession = false;
 
 const LINK =
-  "inline-flex min-h-10 items-center font-medium text-slate-900 underline decoration-slate-300 underline-offset-2 hover:decoration-slate-900 md:min-h-0";
+  "inline-flex min-h-10 items-center font-medium text-brand underline decoration-brand/40 underline-offset-2 hover:decoration-brand md:min-h-0";
 
 function Step({ n, children }: { n: number; children: ReactNode }) {
   return (

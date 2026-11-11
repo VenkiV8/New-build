@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { generateSeededDemo } from "@/lib/dataGenerator";
 import { detectAll } from "@/lib/detector";
 import type { Alert } from "@/lib/types";
-import { ALERT_BUDGET, dataEnd, mostRecentOpen, splitByAlertBudget, timeAgo } from "./inboxView";
+import { ALERT_BUDGET, dataEnd, mostRecentOpen, sortForInbox, splitByAlertBudget, timeAgo } from "./inboxView";
 
 const HOUR = 3_600_000;
 const fake = (id: string, inr: number, startedAt = 0): Alert =>
@@ -31,6 +31,14 @@ describe("dataEnd / timeAgo on the seeded demo", () => {
     const tb = detectAll(history).find((a) => a.failureClass === "TRACKING_BREAK");
     expect(tb).toBeDefined();
     expect(timeAgo(tb!.startedAt, now)).toBe("4h ago");
+  });
+});
+
+describe("sortForInbox", () => {
+  it("puts Resolved/Expected/Snoozed below Open and Acked, by ₹ within each group", () => {
+    const alerts = [fake("big", 900), fake("mid", 500), fake("small", 100), fake("tiny", 50), fake("acked", 70)];
+    const order = sortForInbox(alerts, { big: "RESOLVED", small: "SNOOZED", tiny: "EXPECTED", acked: "ACKED" });
+    expect(order.map((a) => a.id)).toEqual(["mid", "acked", "big", "small", "tiny"]);
   });
 });
 

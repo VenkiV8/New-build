@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { FlaskConical, RotateCcw, X } from "lucide-react";
+import { Beaker, RotateCcw, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import type { InjectableClass } from "@/state/injection";
 
@@ -35,7 +35,7 @@ export function DemoToolbar({ onInject, onReset }: Props) {
           className="mx-auto max-w-5xl rounded-xl border border-dashed border-slate-300 bg-white/95 p-3 shadow-lg backdrop-blur"
         >
           <p className="mb-2 flex items-center gap-1.5 text-xs font-semibold tracking-wide text-slate-500 uppercase">
-            <FlaskConical className="size-3.5" aria-hidden />
+            <Beaker className="size-3.5" aria-hidden />
             Demo controls
           </p>
           <div className="flex flex-wrap gap-2">
@@ -62,7 +62,7 @@ export function DemoToolbar({ onInject, onReset }: Props) {
           >
             <div className="mb-2 flex items-center justify-between">
               <p className="flex items-center gap-1.5 text-xs font-semibold tracking-wide text-slate-500 uppercase">
-                <FlaskConical className="size-3.5" aria-hidden />
+                <Beaker className="size-3.5" aria-hidden />
                 Demo controls
               </p>
               <button
@@ -99,7 +99,7 @@ export function DemoToolbar({ onInject, onReset }: Props) {
             aria-controls="demo-controls-mobile"
             className="flex h-10 items-center gap-1.5 rounded-full border border-dashed border-slate-400 bg-white px-4 text-sm font-medium text-slate-700 shadow-lg"
           >
-            <FlaskConical className="size-4" aria-hidden />
+            <Beaker className="size-4" aria-hidden />
             Demo ▸
           </button>
         )}

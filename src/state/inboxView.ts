@@ -15,6 +15,14 @@ export function splitByAlertBudget(alerts: Alert[]): { paged: Alert[]; digest: A
   return { paged: sorted.slice(0, ALERT_BUDGET), digest: sorted.slice(ALERT_BUDGET) };
 }
 
+const SETTLED: AlertStatus[] = ["RESOLVED", "EXPECTED", "SNOOZED"];
+
+/** Inbox order: Open (and Acked) first, then Resolved/Expected/Snoozed; ₹ at risk desc within each group. */
+export function sortForInbox(alerts: Alert[], statuses: Record<string, AlertStatus>): Alert[] {
+  const settled = (a: Alert) => (SETTLED.includes(statuses[a.id] ?? "OPEN") ? 1 : 0);
+  return [...alerts].sort((a, b) => settled(a) - settled(b) || b.inrAtRiskTotal - a.inrAtRiskTotal);
+}
+
 /** End of the most recent data hour (the "now" the demo data is anchored to). */
 export function dataEnd(history: CampaignHistory): number {
   let last = 0;

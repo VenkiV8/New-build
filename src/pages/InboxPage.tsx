@@ -1,30 +1,73 @@
-import { Link } from "react-router-dom";
+import { useMemo } from "react";
+import { ShieldCheck } from "lucide-react";
 import { CAMPAIGNS } from "@/lib/dataGenerator";
+import { AlertCard } from "@/components/inbox/AlertCard";
+import { CampaignHealthStrip } from "@/components/inbox/CampaignHealthStrip";
+import { DemoToolbar } from "@/components/inbox/DemoToolbar";
+import { InboxHeader } from "@/components/inbox/InboxHeader";
+import { TryThisStrip } from "@/components/inbox/TryThisStrip";
+import { useFreshIds } from "@/hooks/useFreshIds";
 import { useApp } from "@/state/appContext";
-import { formatInr } from "@/utils/format";
+import { dataEnd, protectedThisWeek, splitByAlertBudget, timeAgo } from "@/state/inboxView";
 
-// Slice 1 placeholder: proves state + routing. Full inbox lands in Slice 2.
+const ADVERTISER = "Arjun's skincare D2C";
+
 export default function InboxPage() {
-  const { alerts } = useApp();
+  const { history, alerts, statuses, inject, resetDemo } = useApp();
+  const now = useMemo(() => dataEnd(history), [history]);
+  const { paged, digest } = useMemo(() => splitByAlertBudget(alerts), [alerts]);
+  const fresh = useFreshIds(alerts);
+
+  const card = (a: (typeof alerts)[number], muted = false) => (
+    <li key={a.id}>
+      <AlertCard
+        alert={a}
+        status={statuses[a.id] ?? "OPEN"}
+        startedAgo={timeAgo(a.startedAt, now)}
+        fresh={fresh.has(a.id)}
+        muted={muted}
+      />
+    </li>
+  );
+
   return (
-    <section className="space-y-4">
-      <div>
-        <h1 className="text-xl font-semibold">Arjun's skincare D2C</h1>
-        <p className="text-sm text-slate-500">{alerts.length} open incidents across {CAMPAIGNS.length} campaigns</p>
-      </div>
-      <ul className="space-y-2">
-        {alerts.map((a) => (
-          <li key={a.id}>
-            <Link
-              to={`/incident/${encodeURIComponent(a.id)}`}
-              className="block rounded-lg border border-slate-200 bg-white p-3 text-sm hover:border-slate-300"
-            >
-              <span className="font-medium">{a.severity}</span> · {a.headline}{" "}
-              <span className="font-semibold tabular-nums">({formatInr(a.inrAtRiskTotal)})</span>
-            </Link>
-          </li>
-        ))}
-      </ul>
-    </section>
+    <div className="space-y-5">
+      <InboxHeader
+        advertiser={ADVERTISER}
+        protectedInr={protectedThisWeek(alerts, now)}
+        incidentCount={alerts.length}
+        alertsUsed={paged.length}
+      />
+
+      <TryThisStrip onInjectTrackingBreak={() => inject("TRACKING_BREAK")} />
+
+      <CampaignHealthStrip history={history} />
+
+      {alerts.length === 0 ? (
+        <section className="flex flex-col items-center gap-2 rounded-xl border border-slate-200 bg-white px-6 py-12 text-center">
+          <ShieldCheck className="size-8 text-emerald-600" aria-hidden />
+          <p className="text-base font-semibold text-slate-900">All {CAMPAIGNS.length} campaigns healthy ✓</p>
+          <p className="text-sm text-slate-500">No money at risk right now.</p>
+        </section>
+      ) : (
+        <section aria-label="Incidents" className="space-y-2">
+          <h2 className="text-sm font-medium text-slate-500">
+            {paged.length} incident{paged.length === 1 ? "" : "s"}, sorted by ₹ at risk
+          </h2>
+          <ul className="space-y-2">{paged.map((a) => card(a))}</ul>
+        </section>
+      )}
+
+      {digest.length > 0 && (
+        <section aria-label="Folded into daily digest" className="space-y-2">
+          <h2 className="text-sm font-medium text-slate-500">
+            Folded into today's digest ({digest.length}): alert budget reached, lowest ₹ at risk
+          </h2>
+          <ul className="space-y-2">{digest.map((a) => card(a, true))}</ul>
+        </section>
+      )}
+
+      <DemoToolbar onInject={inject} onReset={resetDemo} />
+    </div>
   );
 }

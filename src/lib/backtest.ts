@@ -1,7 +1,7 @@
-// Rule sandbox: replay one rule over the stored 30-day history at a chosen threshold.
-// "Would have fired 14× in the last 30 days — 9 on Sunday nights."
+// Rule sandbox: replay a rule over 30 days of CLEAN history (every firing = a false alarm)
+// and plant known incidents to measure recall. Together: the precision/recall trade-off.
 
-import type { BacktestResult, CampaignHistory, RuleConfig } from "./types";
+import type { BacktestResult, CampaignHistory, CampaignHistory as H, FailureClass, HourPoint, RuleConfig } from "./types";
 import { detectAll, DEFAULT_RULES, type BaselineMode } from "./detector";
 import { generateHistory } from "./dataGenerator";
 
@@ -79,4 +79,82 @@ export function compareBaselines(rule: RuleConfig, opts: { seed?: number } = {})
     flat,
     falseAlarmsPrevented: Math.max(0, flat.firings.length - seasonal.firings.length),
   };
+}
+
+// ---------------- Recall: does the rule still catch real incidents? ----------------
+// Plant incidents of several strengths at several past moments (all at 8 PM, the
+// demo's evening anchor) and count how many this rule configuration catches.
+// Together with the false-alarm count this is the precision/recall trade-off.
+
+
+interface Plant { label: string; campaignId: string; hours: number; mutate: (p: HourPoint) => void }
+
+const PLANTS: Partial<Record<FailureClass, Plant[]>> = {
+  TRACKING_BREAK: [
+    { label: "Pixel down on Diwali Sale", campaignId: "c1", hours: 4, mutate: (p) => { p.conversions = 0; } },
+    { label: "Pixel down on Retargeting", campaignId: "c2", hours: 4, mutate: (p) => { p.conversions = 0; } },
+  ],
+  SPEND_RUNAWAY: [
+    { label: "2.6× overspend", campaignId: "c1", hours: 2, mutate: (p) => { p.impressions *= 2.6; p.clicks = Math.round(p.clicks * 2.6); p.spendInr = Math.round(p.spendInr * 2.6); } },
+    { label: "1.8× overspend", campaignId: "c1", hours: 2, mutate: (p) => { p.impressions *= 1.8; p.clicks = Math.round(p.clicks * 1.8); p.spendInr = Math.round(p.spendInr * 1.8); } },
+    { label: "1.4× overspend", campaignId: "c3", hours: 2, mutate: (p) => { p.impressions *= 1.4; p.clicks = Math.round(p.clicks * 1.4); p.spendInr = Math.round(p.spendInr * 1.4); } },
+  ],
+  DRIFT: [
+    { label: "CTR −55%", campaignId: "c3", hours: 3, mutate: (p) => { p.clicks = Math.round(p.clicks * 0.45); } },
+    { label: "CTR −35%", campaignId: "c3", hours: 3, mutate: (p) => { p.clicks = Math.round(p.clicks * 0.65); } },
+    { label: "CTR −20%", campaignId: "c3", hours: 3, mutate: (p) => { p.clicks = Math.round(p.clicks * 0.8); } },
+  ],
+  DELIVERY_FAILURE: [
+    { label: "Ads disapproved (delivery ~0)", campaignId: "c1", hours: 3, mutate: (p) => { p.impressions = Math.round(p.impressions * 0.02); p.clicks = 0; p.conversions = 0; p.spendInr = 0; } },
+    { label: "Bids below floor (delivery −70%)", campaignId: "c3", hours: 3, mutate: (p) => { p.impressions = Math.round(p.impressions * 0.3); p.clicks = Math.round(p.clicks * 0.3); p.conversions = Math.round(p.conversions * 0.3); p.spendInr = Math.round(p.spendInr * 0.3); } },
+  ],
+};
+
+const RECALL_DAYS_BACK = [1, 2, 3, 5, 7]; // whole days → each moment is 8 PM, with ≥3 weeks of baseline behind it
+
+export interface RecallResult {
+  caught: number;
+  planted: number;
+  /** per incident type: caught / planted, for a small table */
+  byType: { label: string; caught: number; planted: number }[];
+}
+
+/** null when the class has no plantable incident (BUDGET_EXHAUST). */
+export function measureRecall(rule: RuleConfig, opts: { seed?: number } = {}): RecallResult | null {
+  const plants = PLANTS[rule.failureClass];
+  if (!plants) return null;
+  const base = generateHistory(opts.seed ?? 42);
+  const rules = DEFAULT_RULES.map((r) =>
+    r.failureClass === rule.failureClass ? { ...rule, enabled: true } : { ...r, enabled: false },
+  );
+  const byType = plants.map((pl) => ({ label: pl.label, caught: 0, planted: 0 }));
+  plants.forEach((pl, idx) => {
+    for (const d of RECALL_DAYS_BACK) {
+      const end = base[pl.campaignId].length - d * 24;
+      const slice: H = {};
+      for (const [cid, pts] of Object.entries(base)) {
+        slice[cid] = pts.slice(0, end).map((p) => ({ ...p }));
+      }
+      const s = slice[pl.campaignId];
+      for (let i = s.length - pl.hours; i < s.length; i++) {
+        pl.mutate(s[i]);
+        s[i].impressions = Math.round(s[i].impressions);
+      }
+      const hit = detectAll(slice, { rules, windowHours: 12 }).some(
+        (a) => a.failureClass === rule.failureClass && a.campaignId === pl.campaignId,
+      );
+      byType[idx].planted++;
+      if (hit) byType[idx].caught++;
+    }
+  });
+  return {
+    caught: byType.reduce((s, b) => s + b.caught, 0),
+    planted: byType.reduce((s, b) => s + b.planted, 0),
+    byType,
+  };
+}
+
+/** Apply a slider value to a rule according to its slider metadata. */
+export function withSliderValue(rule: RuleConfig, v: number): RuleConfig {
+  return rule.slider.param === "madK" ? { ...rule, madK: v } : { ...rule, threshold: v };
 }

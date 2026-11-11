@@ -2,7 +2,7 @@ import { useCallback, useMemo, useState, type ReactNode } from "react";
 import { toast } from "sonner";
 import { CAMPAIGNS, generateSeededDemo, injectIncident } from "@/lib/dataGenerator";
 import { DEFAULT_RULES, detectAll } from "@/lib/detector";
-import type { Alert, AlertStatus, CampaignHistory, FailureClass } from "@/lib/types";
+import type { Alert, AlertStatus, CampaignHistory, FailureClass, RuleConfig } from "@/lib/types";
 import { formatDate, formatInr } from "@/utils/format";
 import { AppContext, type AppState } from "./appContext";
 import { newAlerts, pickInjection, type InjectableClass } from "./injection";
@@ -10,12 +10,13 @@ import { exposureStopped, statusForAction } from "./protection";
 
 interface Data {
   history: CampaignHistory;
+  rules: RuleConfig[];
   alerts: Alert[];
 }
 
 function seededData(): Data {
   const history = generateSeededDemo();
-  return { history, alerts: detectAll(history) };
+  return { history, rules: DEFAULT_RULES, alerts: detectAll(history, { rules: DEFAULT_RULES }) };
 }
 
 const campaignName = (id: string) => CAMPAIGNS.find((c) => c.id === id)?.name ?? id;
@@ -54,10 +55,16 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
   const inject = useCallback(
     (failureClass: InjectableClass) => {
+      if (!data.rules.find((r) => r.failureClass === failureClass)?.enabled) {
+        toast(`${classLabel(failureClass)} rule is off`, {
+          description: "Turn it back on in Rules to see it fire.",
+        });
+        return;
+      }
       const injection = pickInjection(failureClass, data.alerts);
       const history = injectIncident(data.history, injection);
-      const alerts = detectAll(history);
-      setData({ history, alerts });
+      const alerts = detectAll(history, { rules: data.rules });
+      setData({ ...data, history, alerts });
 
       const added = newAlerts(data.alerts, alerts).find(
         (a) => a.failureClass === failureClass && a.campaignId === injection.campaignId,
@@ -75,24 +82,36 @@ export function AppProvider({ children }: { children: ReactNode }) {
     [data],
   );
 
+  const setRuleEnabled = useCallback((failureClass: FailureClass, enabled: boolean) => {
+    setData((d) => {
+      const rules = d.rules.map((r) => (r.failureClass === failureClass ? { ...r, enabled } : r));
+      return { ...d, rules, alerts: detectAll(d.history, { rules }) };
+    });
+    toast(`${classLabel(failureClass)} rule ${enabled ? "on" : "off"}`, {
+      description: enabled ? "Detection re-run on current data." : "Its alerts are removed from the inbox until it's back on.",
+    });
+  }, []);
+
   const resetDemo = useCallback(() => {
     setData(seededData());
     setStatuses({});
     setProtectedInr(0);
-    toast.success("Demo reset", { description: "Back to the 3 seeded incidents." });
+    toast.success("Demo reset", { description: "Back to the 3 seeded incidents, all rules on." });
   }, []);
 
   const value = useMemo<AppState>(
     () => ({
       history: data.history,
+      rules: data.rules,
       alerts: data.alerts,
       statuses,
       protectedInr,
       applyAction,
       inject,
+      setRuleEnabled,
       resetDemo,
     }),
-    [data, statuses, protectedInr, applyAction, inject, resetDemo],
+    [data, statuses, protectedInr, applyAction, inject, setRuleEnabled, resetDemo],
   );
 
   return <AppContext.Provider value={value}>{children}</AppContext.Provider>;

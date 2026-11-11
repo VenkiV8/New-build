@@ -31,21 +31,38 @@ with a diagnosis and a one-tap fix. Severity is measured in ₹ at risk, not met
 
 ## Screens (4)
 ### 1. Incident Inbox (home, route /)
-- Header: advertiser name, "₹ protected this week" stat, alert-budget indicator ("2 of 5 daily alerts used").
+- Header: advertiser name and three stats:
+  "At risk now" = sum of inrAtRiskTotal for OPEN alerts, subtitle "across N open incidents";
+  "Protected this session" = starts at ₹0; when an action resolves an alert (Pause / Cap budget /
+  Fix tracking etc., not Snooze or Mark expected) add that alert's inrAtRiskPerHour × 24
+  (rest-of-day exposure avoided) and toast "₹X/day exposure stopped"; resets with the demo;
+  alert-budget indicator ("2 of 5 daily alerts used").
 - Campaign health strip: one chip per campaign with evaluateEligibility().summary
   (e.g. "Brand awareness: 1 rule family on fallback"); click opens a popover listing the 4 gates
   (data freshness, learning phase, conversion volume, traffic volume) with pass/fallback + detail.
   This visibly shows WHY a low-volume campaign is not spamming alerts.
+  Chips wrap (no horizontal scroll); campaigns with any fallback gate sort first, with amber border/icon.
 - List of alert cards sorted by ₹ at risk (desc). Card: severity chip (SEV1 red / SEV2 amber / SEV3 grey),
   failure-class icon + label, campaign name, one-line summary ("Conversions = 0 for 3h while 142 clicks
-  billed — est. ₹1,340 at risk"), time ago, status (Open / Acked / Resolved).
-- Demo toolbar (sticky, clearly marked "Demo controls"): [Inject: Tracking break] [Inject: Spend runaway]
+  billed — est. ₹1,340 at risk"), "started Xh ago · caught Nh after onset" (N = the rule's minHours),
+  status (Open / Acked / Resolved). Alerts beyond the 5/day alert budget show in a "folded into
+  today's digest" section.
+- Demo toolbar (clearly marked "Demo controls"): [Inject: Tracking break] [Inject: Spend runaway]
   [Inject: Delivery failure] [Reset demo]. Injecting mutates the data for one campaign's recent hours,
   re-runs the detector, and a new alert animates into the inbox with a toast.
+  Desktop (≥768px): bar fixed to the bottom; the page reserves bottom padding so it never covers the
+  last card. Mobile (<768px): a floating "Demo ▸" pill at bottom-right that expands into the full
+  controls on tap and collapses after an inject/reset.
+- Mobile tap targets (Try-this links, campaign chips, demo buttons) are at least 40px tall.
 ### 2. Incident Detail (route /incident/:id)
-- Title, severity, ₹ at risk/hour, started-at, affected campaign.
+- Title, severity, ₹ at risk/hour, started-at ("caught Nh after onset"), affected campaign.
 - Chart: actual metric line vs expected band (median ± 2×MAD from baseline) for last 72h,
   anomalous hours shaded red. Recharts Area + Line.
+  TRACKING_BREAK instead charts two lines over the last 72h: "Conversions (rolling 4h)" = sum of actual
+  conversions over the trailing 4 hours, and "Expected from billed clicks (rolling 4h)" = sum over the
+  trailing 4 hours of clicks × campaign.baseCvr (dashed), keeping the red alert-window shading.
+  Title: "Conversions vs what billed clicks should have produced, last 72h".
+  Series computed in src/lib/chartData.ts (pure TS, unit-tested).
 - "Root cause" panel = causal metric tree from buildCausalTree(series, alertWindowHours):
   CPA → CPC (auction price) & CVR; context row: CTR, impressions, effective CPM, spend.
   Each node: label, formula (small, muted), actual vs expected, Δ%. Driver node = red ring + "Driver" tag;
@@ -57,15 +74,24 @@ with a diagnosis and a one-tap fix. Severity is measured in ₹ at risk, not met
   Snooze 24h / Mark expected — "it's Diwali"). Actions update alert status in client state and toast.
   "Mark expected" says the date is added to the campaign's expected-events calendar.
 ### 3. Rule Sandbox (route /rules)
-- Table of the 5 default rules (class, trigger, default threshold, channel, on/off toggle).
-- Select a rule → sensitivity slider (e.g. drift: 20–50% deviation) → live backtest panel:
-  "Would have fired 14× in the last 30 days" + small bar chart of firings by day +
-  breakdown line ("11 of 14 coincided with Sunday-night dips → consider hour-of-week baseline ✓").
-  Backtest re-runs detector on the stored 30-day history with the chosen threshold. Must feel instant.
-- "Why seasonal baselines" comparison card using compareBaselines(rule): two big numbers side by side,
-  "Seasonality-blind rule: 50 false alarms" vs "BudgetPager: 9", plus "41 false alarms prevented"
-  (values come from the function; for SPEND_RUNAWAY at default threshold they are 50 vs 9).
-  Caption: "Both counted on 30 days of healthy campaigns, so every firing is a false alarm."
+- Table of the 5 default rules (class, trigger via thresholdLabel, channel, on/off toggle).
+  The on/off toggle changes LIVE detection (rule set lives in app state); injecting a disabled
+  rule's incident shows "rule is off"; Reset demo re-enables all rules.
+- Select a rule → slider driven by rule.slider (param, min, max, step, format, help). Apply the value
+  with withSliderValue(rule, v). The slider is a SANDBOX: it never changes live detection.
+  Note: for DRIFT the slider is the noise gate k (robust z-score), not a % threshold.
+- Two result numbers side by side, recomputed (debounced 250ms) on every slider move:
+  "False alarms (30 days)" = backtestRule(r).firings.length, computed on CLEAN replayed history,
+  never the live demo data, which is why every firing counts as a false alarm;
+  "Real incidents caught" = measureRecall(r) → "caught / planted" (hide for BUDGET_EXHAUST: null).
+  Below: the measureRecall byType table (e.g. "CTR −20%: 2/5 caught") and the slider.help line.
+  Also: per-day bar chart of false alarms and the backtestRule note string.
+  This is the precision/recall trade-off made tangible; label the default value position on the slider.
+- "Why seasonal baselines" comparison card using compareBaselines(rule) for SPEND_RUNAWAY: two big
+  numbers, "Seasonality-blind rule: 50 false alarms" vs "BudgetPager: 9" + "41 false alarms prevented"
+  (values come from the function). Caption: "Both counted on 30 days of healthy campaigns."
+  Show this card regardless of which rule is selected.
+
 ### 4. Notification Preview (route /notifications)
 - Severity → channel matrix (SEV1: WhatsApp + push, SEV2: push + in-app, SEV3: daily digest).
 - Mock WhatsApp phone frame showing a SEV1 message with [Pause] [View] quick replies.
@@ -80,8 +106,8 @@ with a diagnosis and a one-tap fix. Severity is measured in ₹ at risk, not met
 |---|---|---|---|
 | SPEND_RUNAWAY | spend pacing vs expected-by-hour baseline | >150% for 1h | overspend ₹/h |
 | TRACKING_BREAK | conversions=0 while ≥4 were expected from billed clicks | 3 consecutive h | spend with no measurable return |
-| DRIFT | CTR vs same-hour-of-week median | >30% and >2×MAD for 2h, ≥150 impressions/h | est. lost conversions × AOV margin proxy |
-| DELIVERY_FAILURE | impressions < 5% of expected | 2h | expected-hours' budget forfeited |
+| DRIFT | CTR vs same-hour-of-week median | deviation > k×MAD (k=2) AND ≥15%, for 2h, ≥150 impressions/h | est. lost conversions × AOV margin proxy |
+| DELIVERY_FAILURE | impressions < 50% of expected | 2h | expected-hours' budget forfeited |
 | BUDGET_EXHAUST | daily budget gone before 40% of day | once/day | remaining-day opportunity |
 Severity is relative to the campaign's hourly pace (dailyBudget/24):
 SEV1 ≥ 1.5× hourly pace at risk per hour, SEV2 ≥ 0.6×, else SEV3.
@@ -89,7 +115,7 @@ Global guardrail: alert budget = max 5 alerts/day per advertiser; lowest-₹ ale
 
 ## Design
 - Tone: calm ops console, not a flashy dashboard. Neutral slate background, white cards,
-  red/amber only for severity. Rupee amounts always prominent (font-semibold, tabular-nums).
+  red/amber only for severity (plus amber for eligibility-fallback chips). Rupee amounts always prominent (font-semibold, tabular-nums).
 - Empty states and the "all clear" state ("All 4 campaigns healthy ✓") must look intentional.
 - Top of inbox: dismissible "Try this in 60 seconds" strip: 1) Inject a tracking break
   2) Open the incident 3) See the ₹ math 4) Tune the rule in Sandbox.

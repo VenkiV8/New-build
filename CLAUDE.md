@@ -16,7 +16,8 @@ No backend, no API calls, no env vars, no keys, no new heavy dependencies withou
   These files are pure TypeScript: no React, no imports from src/components or src/pages.
 - UI components never compute detection logic inline; they call lib functions.
 - All randomness goes through the seeded PRNG in dataGenerator.ts. Never use Math.random().
-- App state: a single React context/store holding { campaigns, history, alerts, alertStatuses }.
+- App state: a single React context/store holding { campaigns, history, rules, alerts, alertStatuses }.
+  rules = live rule set (on/off); detectAll(history, { rules }) uses it. Sandbox slider values never touch it.
   Inject/reset actions regenerate data and re-run detectAll().
 - Money is in integer paise internally if arithmetic matters; display as ₹ with Intl.NumberFormat('en-IN').
 

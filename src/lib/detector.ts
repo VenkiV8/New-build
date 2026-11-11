@@ -58,26 +58,53 @@ export const DEFAULT_RULES: RuleConfig[] = [
     failureClass: "SPEND_RUNAWAY", enabled: true, threshold: 1.5, minHours: 1,
     label: "Spend runaway",
     thresholdLabel: (t) => `Spend > ${Math.round(t * 100)}% of expected for 1h`,
+    slider: {
+      param: "threshold", min: 1.1, max: 3, step: 0.1,
+      format: (v) => `${Math.round(v * 100)}% of expected`,
+      help: "Lower = catch smaller overspends sooner, but busy evenings start paging you.",
+    },
   },
   {
     failureClass: "TRACKING_BREAK", enabled: true, threshold: 4, minHours: 3,
     label: "Tracking break",
     thresholdLabel: (t) => `0 conversions for 3h while ≥ ${t} were expected from billed clicks`,
+    slider: {
+      param: "threshold", min: 1, max: 8, step: 0.5,
+      format: (v) => `≥ ${v} expected conversions`,
+      help: "Lower = also watch low-volume campaigns, where a quiet 3 hours is often just chance.",
+    },
   },
   {
-    failureClass: "DRIFT", enabled: true, threshold: 0.3, minHours: 2,
+    // Dual condition (statistical AND practical): deviation must exceed madK × MAD
+    // (robust z-score) AND be at least a 15% change. The noise gate k is the real lever.
+    failureClass: "DRIFT", enabled: true, threshold: 0.15, minHours: 2, madK: 2,
     label: "Performance drift",
-    thresholdLabel: (t) => `CTR/CPA deviates > ${Math.round(t * 100)}% vs same hour-of-week, 2h in a row`,
+    thresholdLabel: () => `CTR deviates beyond k × normal variation (and ≥15%) vs same hour-of-week, 2h in a row`,
+    slider: {
+      param: "madK", min: 0.5, max: 3, step: 0.25,
+      format: (v) => `k = ${v.toFixed(2)} × normal variation`,
+      help: "Lower k = catch subtle drift earlier, but ordinary hour-to-hour noise starts to page you.",
+    },
   },
   {
-    failureClass: "DELIVERY_FAILURE", enabled: true, threshold: 0.05, minHours: 2,
+    failureClass: "DELIVERY_FAILURE", enabled: true, threshold: 0.5, minHours: 2,
     label: "Delivery failure",
     thresholdLabel: (t) => `Impressions < ${Math.round(t * 100)}% of expected for 2h`,
+    slider: {
+      param: "threshold", min: 0.05, max: 0.9, step: 0.05,
+      format: (v) => `< ${Math.round(v * 100)}% of expected`,
+      help: "Healthy delivery rarely halves, so this rule stays quiet until set very loose; stricter settings miss partial outages.",
+    },
   },
   {
     failureClass: "BUDGET_EXHAUST", enabled: true, threshold: 0.4, minHours: 1,
     label: "Budget exhausted early",
     thresholdLabel: (t) => `Daily budget spent before ${Math.round(t * 100)}% of the day`,
+    slider: {
+      param: "threshold", min: 0.4, max: 1, step: 0.05,
+      format: (v) => `before ${Math.round(v * 100)}% of the day`,
+      help: "Near 100% it fires on any day the budget is simply used up, which is normal pacing.",
+    },
   },
 ];
 
@@ -228,7 +255,7 @@ export function detectAll(history: CampaignHistory, opts: DetectOpts = {}): Aler
         const bCtr = baselineAt(series, i, (q) => (q.impressions ? q.clicks / q.impressions : 0), mode);
         const actualCtr = p.clicks / p.impressions;
         const deviation = bCtr.median > 0 ? (bCtr.median - actualCtr) / bCtr.median : 0;
-        const madGate = Math.abs(actualCtr - bCtr.median) > 2 * bCtr.mad;
+        const madGate = Math.abs(actualCtr - bCtr.median) > (dr.madK ?? 2) * bCtr.mad;
         if (bCtr.sampleSize >= 6 && deviation > dr.threshold && madGate) {
           run++; firstTs = p.ts; lastExp = bCtr.median; lastAct = actualCtr;
           lostConv += Math.max(0, (bCtr.median - actualCtr) * p.impressions * c.baseCvr);
@@ -241,7 +268,7 @@ export function detectAll(history: CampaignHistory, opts: DetectOpts = {}): Aler
           expected: +(lastExp * 100).toFixed(2), actual: +(lastAct * 100).toFixed(2),
           startedAt: firstTs, atRiskPerHour, atRiskTotal,
           headline: `CTR down ${Math.round(((lastExp - lastAct) / lastExp) * 100)}% vs baseline for ${run}h — est. ${inr(atRiskTotal)} in lost outcomes`,
-          explanation: `CTR has been below the same-hour-of-week baseline for ${run} consecutive hours (${(lastExp * 100).toFixed(2)}% expected vs ${(lastAct * 100).toFixed(2)}% actual), beyond normal variation (>2×MAD). Sustained drift at healthy volume usually points to creative fatigue or placement-mix shift rather than noise.`,
+          explanation: `CTR has been below the same-hour-of-week baseline for ${run} consecutive hours (${(lastExp * 100).toFixed(2)}% expected vs ${(lastAct * 100).toFixed(2)}% actual), beyond normal variation. Sustained drift at healthy volume usually points to creative fatigue or placement-mix shift rather than noise.`,
           dailyBudget: c.dailyBudgetInr,
         }));
       }

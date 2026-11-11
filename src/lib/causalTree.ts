@@ -145,7 +145,7 @@ export function diagnoseTree(nodes: TreeNode[]): string {
       return `CPC ${pct} with engagement and conversion steady: auction pressure (e.g. competitors' sale-season bids). Adjust bid caps or shift budget to cheaper contexts.`;
     case "impressions":
       return driver.deltaPct > 0
-        ? `Delivery ${pct} at normal CPM and CTR: a volume surge (broad targeting expansion or a new placement cluster) is absorbing budget faster than it converts. Cap today's budget, then narrow targeting.`
+        ? `Delivery ${pct} at normal CPC and CTR: a volume surge (broad targeting expansion or a new placement cluster) is absorbing budget faster than it converts. Cap today's budget, then narrow targeting.`
         : `Delivery ${pct}: the campaign is not being served. Check approval status, billing, and bids versus placement floors.`;
     default:
       return `${driver.label} ${pct} is the largest deviation.`;

@@ -1,5 +1,5 @@
 import { createContext, useContext } from "react";
-import type { Alert, AlertStatus, CampaignHistory } from "@/lib/types";
+import type { Alert, AlertStatus, CampaignHistory, FailureClass, RuleConfig } from "@/lib/types";
 import type { InjectableClass } from "./injection";
 
 export interface AppState {
@@ -12,6 +12,10 @@ export interface AppState {
   /** apply a suggested action: sets the alert's status; fixes add to protectedInr */
   applyAction: (alertId: string, action: string) => void;
   inject: (failureClass: InjectableClass) => void;
+  /** live rule set (DEFAULT_RULES with on/off applied); detection runs with these */
+  rules: RuleConfig[];
+  /** turn a rule family on/off for live detection; re-runs detectAll */
+  setRuleEnabled: (failureClass: FailureClass, enabled: boolean) => void;
   resetDemo: () => void;
 }
 

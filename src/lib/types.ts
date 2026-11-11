@@ -74,8 +74,21 @@ export interface RuleConfig {
   /** class-specific sensitivity knob, see detector.ts for meaning */
   threshold: number;
   minHours: number; // consecutive hours required
+  /** DRIFT only: noise gate, deviation must exceed madK × MAD (robust z-score). Default 2. */
+  madK?: number;
   label: string;
   thresholdLabel: (t: number) => string;
+  /** Which knob the Rule Sandbox slider controls, and its range. */
+  slider: {
+    param: "threshold" | "madK";
+    min: number;
+    max: number;
+    step: number;
+    /** short label for the current slider value, e.g. "k = 2.0" or "150%" */
+    format: (v: number) => string;
+    /** one line explaining what moving the slider trades off */
+    help: string;
+  };
 }
 
 export interface IncidentInjection {

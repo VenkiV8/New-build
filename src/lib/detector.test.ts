@@ -135,3 +135,42 @@ describe("eligibility gates", () => {
     expect(e1.summary).toBe("All rules active");
   });
 });
+
+// ---------- Rule Sandbox: sliders must show a real precision/recall trade-off ----------
+import { measureRecall, withSliderValue, backtestRule as bt } from "./backtest";
+
+describe("rule sandbox trade-offs", () => {
+  const rule = (fc: string) => DEFAULT_RULES.find((r) => r.failureClass === fc)!;
+
+  it("every rule's slider moves the false-alarm count somewhere in its range", () => {
+    for (const r of DEFAULT_RULES) {
+      const lo = bt(withSliderValue(r, r.slider.min)).firings.length;
+      const hi = bt(withSliderValue(r, r.slider.max)).firings.length;
+      expect(lo).not.toBe(hi);
+    }
+  }, 120000);
+
+  it("defaults: tracking break catches every planted outage with ≤1 false alarm", () => {
+    const r = rule("TRACKING_BREAK");
+    expect(bt(r).firings.length).toBeLessThanOrEqual(1);
+    const rc = measureRecall(r)!;
+    expect(rc.caught).toBe(rc.planted);
+  }, 120000);
+
+  it("drift: lowering k catches more planted drift but raises false alarms", () => {
+    const r = rule("DRIFT");
+    const loose = withSliderValue(r, 0.5);
+    expect(measureRecall(loose)!.caught).toBeGreaterThan(measureRecall(r)!.caught);
+    expect(bt(loose).firings.length).toBeGreaterThan(bt(r).firings.length);
+  }, 120000);
+
+  it("delivery default catches partial outages with zero false alarms", () => {
+    const r = rule("DELIVERY_FAILURE");
+    expect(bt(r).firings.length).toBe(0);
+    expect(measureRecall(r)!.caught).toBe(measureRecall(r)!.planted);
+  }, 120000);
+
+  it("budget exhaust has no plantable incident", () => {
+    expect(measureRecall(rule("BUDGET_EXHAUST"))).toBeNull();
+  });
+});

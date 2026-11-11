@@ -3,7 +3,7 @@ import { toast } from "sonner";
 import { CAMPAIGNS, generateSeededDemo, injectIncident } from "@/lib/dataGenerator";
 import { DEFAULT_RULES, detectAll } from "@/lib/detector";
 import type { Alert, AlertStatus, CampaignHistory, FailureClass } from "@/lib/types";
-import { formatInr } from "@/utils/format";
+import { formatDate, formatInr } from "@/utils/format";
 import { AppContext, type AppState } from "./appContext";
 import { newAlerts, pickInjection, type InjectableClass } from "./injection";
 import { exposureStopped, statusForAction } from "./protection";
@@ -38,6 +38,14 @@ export function AppProvider({ children }: { children: ReactNode }) {
         setProtectedInr((p) => p + stopped);
         toast.success(`${formatInr(stopped)}/day exposure stopped`, {
           description: `${action}: ${campaignName(alert.campaignId)}`,
+        });
+      } else if (next === "SNOOZED") {
+        toast(`Snoozed for 24h: ${campaignName(alert.campaignId)}`, {
+          description: "You'll be paged again only if severity escalates.",
+        });
+      } else if (next === "EXPECTED") {
+        toast(`Marked expected: ${campaignName(alert.campaignId)}`, {
+          description: `${formatDate(alert.startedAt)} added to this campaign's expected-events calendar, so the baseline learns.`,
         });
       }
     },

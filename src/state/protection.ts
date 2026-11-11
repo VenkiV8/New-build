@@ -13,6 +13,18 @@ export function statusForAction(action: string): AlertStatus {
   return "RESOLVED";
 }
 
+/**
+ * Action buttons for an alert: its suggested actions (first = primary), plus
+ * Snooze 24h and Mark expected when the class doesn't already offer them.
+ */
+export function actionsFor(alert: Alert): string[] {
+  const actions = [...alert.suggestedActions];
+  const has = (s: AlertStatus) => actions.some((a) => statusForAction(a) === s && !a.toLowerCase().startsWith("ignore"));
+  if (!has("SNOOZED")) actions.push("Snooze 24h");
+  if (!has("EXPECTED")) actions.push("Mark expected");
+  return actions;
+}
+
 /** Rest-of-day exposure avoided by fixing an alert: ₹/h at risk × 24. */
 export function exposureStopped(alert: Alert): number {
   return Math.round(alert.inrAtRiskPerHour * 24);

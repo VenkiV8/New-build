@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { generateSeededDemo } from "@/lib/dataGenerator";
 import { detectAll } from "@/lib/detector";
 import type { Alert } from "@/lib/types";
-import { atRiskNow, exposureStopped, statusForAction } from "./protection";
+import { actionsFor, atRiskNow, exposureStopped, statusForAction } from "./protection";
 
 const fake = (id: string, total: number, perHour = 0): Alert =>
   ({ id, inrAtRiskTotal: total, inrAtRiskPerHour: perHour }) as Alert;
@@ -23,6 +23,25 @@ describe("statusForAction", () => {
     const actions = detectAll(generateSeededDemo()).flatMap((a) => a.suggestedActions);
     expect(actions.length).toBeGreaterThan(0);
     for (const a of actions) expect(["RESOLVED", "SNOOZED", "EXPECTED"]).toContain(statusForAction(a));
+  });
+});
+
+describe("actionsFor", () => {
+  const withActions = (suggestedActions: string[]) => ({ suggestedActions }) as Alert;
+
+  it("keeps the class's primary action first and adds snooze / mark expected once", () => {
+    expect(actionsFor(withActions(["Open tracking checklist", "Pause campaign", "Snooze 24h"]))).toEqual([
+      "Open tracking checklist",
+      "Pause campaign",
+      "Snooze 24h",
+      "Mark expected",
+    ]);
+    expect(actionsFor(withActions(["Cap today's budget", "Pause campaign", "Mark expected (sale day)"]))).toEqual([
+      "Cap today's budget",
+      "Pause campaign",
+      "Mark expected (sale day)",
+      "Snooze 24h",
+    ]);
   });
 });
 

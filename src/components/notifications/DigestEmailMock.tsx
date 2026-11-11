@@ -40,7 +40,7 @@ export function DigestEmailMock({ advertiser, date, digest }: Props) {
           </p>
           <p>
             <span className="inline-block w-14">Date</span>
-            <span className="text-slate-700">{formatDate(date)}, 9:00 PM</span>
+            <span className="text-slate-700">{formatDate(date)}, 9:00 PM IST</span>
           </p>
         </header>
 

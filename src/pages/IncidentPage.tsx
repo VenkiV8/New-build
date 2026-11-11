@@ -18,9 +18,9 @@ import { TrackingBreakChart } from "@/components/incident/TrackingBreakChart";
 import { TrackingChecklistDialog } from "@/components/incident/TrackingChecklistDialog";
 import { buildCausalTree, diagnoseTree } from "@/lib/causalTree";
 import { alertWindowHours, bandSeries, trackingSeries } from "@/lib/chartData";
-import { CAMPAIGNS } from "@/lib/dataGenerator";
+import { CAMPAIGNS, demoNow } from "@/lib/dataGenerator";
 import { useApp } from "@/state/appContext";
-import { dataEnd, timeAgo } from "@/state/inboxView";
+import { timeAgo } from "@/state/inboxView";
 import {
   actionsFor,
   exposureStopped,
@@ -109,7 +109,7 @@ export default function IncidentPage() {
           </div>
           <div className="rounded-lg border border-slate-200 bg-white px-3 py-2">
             <dt className="text-xs text-slate-500">Started</dt>
-            <dd className="text-sm font-semibold text-slate-900">{timeAgo(alert.startedAt, dataEnd(history))}</dd>
+            <dd className="text-sm font-semibold text-slate-900">{timeAgo(alert.startedAt, demoNow())}</dd>
             <dd className="text-xs text-slate-500">{formatDateTime(alert.startedAt)}</dd>
             <dd className="text-xs text-slate-500">{caughtAfterOnset(alert.failureClass)}</dd>
           </div>

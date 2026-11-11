@@ -1,8 +1,8 @@
 import { describe, expect, it } from "vitest";
-import { generateSeededDemo } from "@/lib/dataGenerator";
+import { DEMO_NOW_TS, demoNow, generateSeededDemo, istParts } from "@/lib/dataGenerator";
 import { detectAll } from "@/lib/detector";
 import type { Alert } from "@/lib/types";
-import { ALERT_BUDGET, dataEnd, mostRecentOpen, sortForInbox, splitByAlertBudget, timeAgo } from "./inboxView";
+import { ALERT_BUDGET, mostRecentOpen, sortForInbox, splitByAlertBudget, timeAgo } from "./inboxView";
 
 const HOUR = 3_600_000;
 const fake = (id: string, inr: number, startedAt = 0): Alert =>
@@ -24,13 +24,18 @@ describe("splitByAlertBudget", () => {
   });
 });
 
-describe("dataEnd / timeAgo on the seeded demo", () => {
-  it("dates a 4h tracking break as 4h ago", () => {
+describe("timeAgo on the seeded demo (against demoNow)", () => {
+  it("dates the tracking break (onset 5 PM IST) as 3h before the fixed 8 PM IST demo clock", () => {
     const history = generateSeededDemo();
-    const now = dataEnd(history);
     const tb = detectAll(history).find((a) => a.failureClass === "TRACKING_BREAK");
     expect(tb).toBeDefined();
-    expect(timeAgo(tb!.startedAt, now)).toBe("4h ago");
+    expect(istParts(tb!.startedAt).hours).toBe(17);
+    expect(timeAgo(tb!.startedAt, demoNow())).toBe("3h ago");
+  });
+
+  it("does not depend on the wall clock", () => {
+    expect(demoNow()).toBe(DEMO_NOW_TS);
+    expect(istParts(demoNow())).toMatchObject({ date: 10, month: 10, hours: 20 });
   });
 });
 

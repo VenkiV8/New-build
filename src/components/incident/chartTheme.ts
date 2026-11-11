@@ -1,3 +1,4 @@
+import { istParts } from "@/lib/dataGenerator";
 import { formatDate, formatHourTick } from "@/utils/format";
 
 export const HOUR = 3_600_000;
@@ -16,14 +17,14 @@ export const GRID = "#e2e8f0"; // slate-200: grid lines
 
 export const AXIS_TICK = { fontSize: 11, fill: SECONDARY };
 
-/** Tick positions every `every` hours, aligned to midnight (default: midnight and noon). */
+/** Tick positions every `every` hours, aligned to IST midnight (default: midnight and noon IST). */
 export function hourTicks(points: { ts: number }[], every = 12): number[] {
-  return points.filter((p) => new Date(p.ts).getHours() % every === 0).map((p) => p.ts);
+  return points.filter((p) => istParts(p.ts).hours % every === 0).map((p) => p.ts);
 }
 
 /** Midnight ticks show the date, noon ticks the hour. */
 export function xTickLabel(ts: number): string {
-  return new Date(ts).getHours() === 0 ? formatDate(ts).replace(",", "") : formatHourTick(ts);
+  return istParts(ts).hours === 0 ? formatDate(ts).replace(",", "") : formatHourTick(ts);
 }
 
 /** Keep `value` only inside the alert window (plus the hour before, so the red segment connects). */

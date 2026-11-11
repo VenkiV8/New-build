@@ -4,7 +4,7 @@ import { ADVERTISER, ADVERTISER_INITIALS, OWNER, TOTAL_DAILY_BUDGET_INR } from "
 import { formatInr } from "@/utils/format";
 
 /** Avatar with a read-only account summary. No sign-out / settings: nothing that does nothing. */
-export function AccountMenu({ asOf }: { asOf: string | null }) {
+export function AccountMenu({ asOf }: { asOf: string }) {
   return (
     <Popover>
       <PopoverTrigger asChild>
@@ -32,12 +32,10 @@ export function AccountMenu({ asOf }: { asOf: string | null }) {
               {CAMPAIGNS.length} campaigns · {formatInr(TOTAL_DAILY_BUDGET_INR)}/day total budget
             </dd>
           </div>
-          {asOf && (
-            <div>
-              <dt className="sr-only">Data freshness</dt>
-              <dd className="text-slate-500">Data as of {asOf}</dd>
-            </div>
-          )}
+          <div>
+            <dt className="sr-only">Data freshness</dt>
+            <dd className="text-slate-500">Data as of {asOf}</dd>
+          </div>
         </dl>
       </PopoverContent>
     </Popover>

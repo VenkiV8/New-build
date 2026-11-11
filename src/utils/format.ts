@@ -1,3 +1,5 @@
+import { istParts } from "@/lib/dataGenerator";
+
 const inrFormatter = new Intl.NumberFormat("en-IN", {
   style: "currency",
   currency: "INR",
@@ -9,32 +11,41 @@ export function formatInr(amount: number): string {
   return inrFormatter.format(Math.round(amount));
 }
 
+// All dates/times are shown in IST, never the viewer's local zone: the demo
+// clock is fixed at demoNow() (Tue 10 Nov 2026, 8:00 PM IST).
+export const DEMO_TIME_ZONE = "Asia/Kolkata";
+
 const timeFormatter = new Intl.DateTimeFormat("en-US", {
   hour: "numeric",
   minute: "2-digit",
+  timeZone: DEMO_TIME_ZONE,
 });
 
-/** Clock time for display, e.g. "8:00 PM". */
+/** Clock time in IST, e.g. "8:00 PM". */
 export function formatClockTime(ts: number): string {
   return timeFormatter.format(ts);
 }
 
-const dateFormatter = new Intl.DateTimeFormat("en-IN", { weekday: "short", day: "numeric", month: "short" });
+const dateFormatter = new Intl.DateTimeFormat("en-IN", {
+  weekday: "short",
+  day: "numeric",
+  month: "short",
+  timeZone: DEMO_TIME_ZONE,
+});
 
-/** Short date, e.g. "Tue, 11 Nov". */
+/** Short date in IST, e.g. "Tue, 10 Nov". */
 export function formatDate(ts: number): string {
   return dateFormatter.format(ts);
 }
 
-/** Short date + time, e.g. "Tue, 11 Nov, 4:00 PM". */
+/** Short date + time in IST, e.g. "Tue, 10 Nov, 4:00 PM". */
 export function formatDateTime(ts: number): string {
   return `${formatDate(ts)}, ${formatClockTime(ts)}`;
 }
 
-/** Hour tick label for charts, e.g. "4 PM". */
+/** Hour tick label for charts in IST, e.g. "4 PM". */
 export function formatHourTick(ts: number): string {
-  const d = new Date(ts);
-  const h = d.getHours();
+  const h = istParts(ts).hours;
   return `${h % 12 === 0 ? 12 : h % 12} ${h < 12 ? "AM" : "PM"}`;
 }
 

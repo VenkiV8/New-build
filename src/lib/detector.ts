@@ -4,7 +4,7 @@
 import type {
   Alert, Baseline, CampaignHistory, CauseItem, FailureClass, HourPoint, RuleConfig, Severity,
 } from "./types";
-import { CAMPAIGNS, hourOfWeek, mulberry32 } from "./dataGenerator";
+import { CAMPAIGNS, hourOfWeek, istParts, mulberry32, sameIstDay } from "./dataGenerator";
 
 // ---------- small stats helpers ----------
 export function median(xs: number[]): number {
@@ -301,12 +301,11 @@ export function detectAll(history: CampaignHistory, opts: DetectOpts = {}): Aler
     const be = ruleOn("BUDGET_EXHAUST");
     if (be) {
       const lastTs = series[n - 1].ts;
-      const d = new Date(lastTs);
-      const hoursToday = d.getHours() + 1;
+      const hoursToday = istParts(lastTs).hours + 1;
       const dayFrac = hoursToday / 24;
       if (dayFrac <= be.threshold + 1e-9) {
         let spendToday = 0;
-        for (let i = n - 1; i >= 0 && new Date(series[i].ts).getDate() === d.getDate(); i--) {
+        for (let i = n - 1; i >= 0 && sameIstDay(series[i].ts, lastTs); i--) {
           spendToday += series[i].spendInr;
         }
         if (spendToday >= c.dailyBudgetInr) {

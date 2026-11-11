@@ -4,13 +4,13 @@ import { ChannelMatrix } from "@/components/notifications/ChannelMatrix";
 import { DigestEmailMock } from "@/components/notifications/DigestEmailMock";
 import { NoiseControls } from "@/components/notifications/NoiseControls";
 import { PhoneMock } from "@/components/notifications/PhoneMock";
+import { demoNow } from "@/lib/dataGenerator";
 import { ADVERTISER } from "@/state/account";
 import { useApp } from "@/state/appContext";
-import { dataEnd } from "@/state/inboxView";
 import { buildDigest, whatsAppAlert } from "@/state/notificationView";
 
 export default function NotificationsPage() {
-  const { history, alerts, statuses, applyAction } = useApp();
+  const { alerts, statuses, applyAction } = useApp();
   // After Pause, keep showing the paused message rather than jumping to the next SEV1.
   const [pausedId, setPausedId] = useState<string | null>(null);
   const sev1 = useMemo(() => {
@@ -39,7 +39,7 @@ export default function NotificationsPage() {
 
       <div className="grid gap-6 md:grid-cols-[18rem_1fr] md:items-start">
         <PhoneMock alert={sev1} paused={!!sev1 && sev1.id === pausedId} onPause={pause} />
-        <DigestEmailMock advertiser={ADVERTISER} date={dataEnd(history)} digest={digest} />
+        <DigestEmailMock advertiser={ADVERTISER} date={demoNow()} digest={digest} />
       </div>
 
       <NoiseControls />

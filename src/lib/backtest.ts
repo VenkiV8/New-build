@@ -3,7 +3,7 @@
 
 import type { BacktestResult, CampaignHistory, CampaignHistory as H, FailureClass, HourPoint, RuleConfig } from "./types";
 import { detectAll, DEFAULT_RULES, type BaselineMode } from "./detector";
-import { generateHistory } from "./dataGenerator";
+import { generateHistory, istParts } from "./dataGenerator";
 
 /**
  * Slide a 24h-step window across CLEAN history (no injected incidents) and count
@@ -31,7 +31,7 @@ export function backtestRule(
     for (const [cid, pts] of Object.entries(history)) slice[cid] = pts.slice(0, end);
     const alerts = detectAll(slice, { rules, windowHours: 12, baselineMode: opts.baselineMode });
     for (const a of alerts) {
-      const dayKey = `${a.campaignId}-${new Date(a.startedAt).toDateString()}`;
+      const dayKey = `${a.campaignId}-${new Date(a.startedAt + 5.5 * 3600_000).toISOString().slice(0, 10)}`;
       if (!seen.has(dayKey)) {
         seen.add(dayKey);
         firings.push({ ts: a.startedAt, campaignId: a.campaignId });
@@ -43,16 +43,15 @@ export function backtestRule(
   const byDay = new Map<string, number>();
   for (const f of firings) {
     const d = new Date(f.ts);
-    const label = d.toLocaleDateString("en-IN", { weekday: "short", day: "numeric", month: "short" });
+    const label = d.toLocaleDateString("en-IN", { weekday: "short", day: "numeric", month: "short", timeZone: "Asia/Kolkata" });
     byDay.set(label, (byDay.get(label) ?? 0) + 1);
   }
   const perDay = [...byDay.entries()].map(([day, count]) => ({ day, count }));
 
   // note: how many firings fall on weekend evenings (the classic false-positive trap)
   const weekendish = firings.filter((f) => {
-    const d = new Date(f.ts);
-    const dow = d.getDay();
-    return dow === 0 || dow === 6;
+    const dow = istParts(f.ts).dow; // 0 = Mon … 6 = Sun
+    return dow >= 5;
   }).length;
 
   const note =

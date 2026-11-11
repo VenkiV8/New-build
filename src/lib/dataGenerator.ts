@@ -64,24 +64,46 @@ export function howCurve(hourOfWeek: number): number {
   return daily * weekend;
 }
 
+// ---------- time: everything is computed in IST, never the viewer's time zone ----------
+// The demo must look identical for every judge, on any day, in any time zone.
+
+export const IST_OFFSET_MS = 5.5 * 3600_000;
+
+/** Calendar fields of a timestamp as seen in IST (UTC+05:30). */
+export function istParts(ts: number) {
+  const d = new Date(ts + IST_OFFSET_MS);
+  return {
+    year: d.getUTCFullYear(),
+    month: d.getUTCMonth(),
+    date: d.getUTCDate(),
+    hours: d.getUTCHours(),
+    /** 0 = Monday … 6 = Sunday */
+    dow: (d.getUTCDay() + 6) % 7,
+  };
+}
+
 export function hourOfWeek(ts: number): number {
-  const d = new Date(ts);
-  // getDay(): 0=Sun..6=Sat → remap to 0=Mon..6=Sun
-  const dow = (d.getDay() + 6) % 7;
-  return dow * 24 + d.getHours();
+  const p = istParts(ts);
+  return p.dow * 24 + p.hours;
+}
+
+/** Same IST calendar day? */
+export function sameIstDay(a: number, b: number): boolean {
+  const x = istParts(a), y = istParts(b);
+  return x.year === y.year && x.month === y.month && x.date === y.date;
 }
 
 /**
- * Demo "now": the most recent 8 PM. Anchoring to the evening peak keeps the demo
- * load-time independent — injected incidents land on high-traffic hours, so they look
- * meaningful and pass volume gates whether a judge opens the link at 9am or 2am.
- * The UI should show "Data as of 8:00 PM" somewhere subtle.
+ * Demo "now": FIXED at Tue 10 Nov 2026, 8:00 PM IST (14:30 UTC).
+ * Fixed rather than "most recent 8 PM" so the data, alerts and every number in the
+ * case deck stay identical on every day and in every time zone. 8 PM is the evening
+ * peak, so injected incidents land on high-traffic hours.
+ * UI: format times with timeZone "Asia/Kolkata" and show "Data as of 8:00 PM IST".
  */
+export const DEMO_NOW_TS = Date.UTC(2026, 10, 10, 14, 30);
+
 export function demoNow(): number {
-  const d = new Date();
-  if (d.getHours() < 20) d.setDate(d.getDate() - 1);
-  d.setHours(20, 0, 0, 0);
-  return d.getTime();
+  return DEMO_NOW_TS;
 }
 
 /** Generate 30 days of clean hourly history for all campaigns. Deterministic for a given seed. */

@@ -1,6 +1,7 @@
 import { Link, NavLink } from "react-router-dom";
 import { Clock } from "lucide-react";
 import { cn } from "cn";
+import { demoNow } from "@/lib/dataGenerator";
 import { useApp } from "@/state/appContext";
 import { atRiskNow } from "@/state/protection";
 import { formatClockTime } from "@/utils/format";
@@ -14,9 +15,9 @@ const LINKS = [
 ];
 
 export function TopNav() {
-  const { history, alerts, statuses } = useApp();
-  const series = history.c1 ?? [];
-  const asOf = series.length ? formatClockTime(series[series.length - 1].ts) : null;
+  const { alerts, statuses } = useApp();
+  // Fixed demo clock, always shown in IST ("8:00 PM IST").
+  const asOf = `${formatClockTime(demoNow())} IST`;
   const openCount = atRiskNow(alerts, statuses).openCount;
 
   return (
@@ -52,13 +53,11 @@ export function TopNav() {
           ))}
         </nav>
         <div className="ml-auto flex items-center gap-1">
-          {asOf && (
-            // on smaller screens this lives in the account menu instead
-            <span className="mr-2 hidden items-center gap-1 text-xs text-slate-300 md:inline-flex">
-              <Clock className="size-3.5" aria-hidden />
-              Data as of {asOf}
-            </span>
-          )}
+          {/* on smaller screens this lives in the account menu instead */}
+          <span className="mr-2 hidden items-center gap-1 text-xs text-slate-300 md:inline-flex">
+            <Clock className="size-3.5" aria-hidden />
+            Data as of {asOf}
+          </span>
           <AlertsBell openCount={openCount} />
           <AccountMenu asOf={asOf} />
         </div>

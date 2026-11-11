@@ -1,5 +1,5 @@
 // Pure view helpers for the Incident Inbox. No React here.
-import type { Alert, AlertStatus, CampaignHistory } from "@/lib/types";
+import type { Alert, AlertStatus } from "@/lib/types";
 
 /** Global guardrail from SPEC: at most 5 alerts/day per advertiser page you. */
 export const ALERT_BUDGET = 5;
@@ -21,16 +21,6 @@ const SETTLED: AlertStatus[] = ["RESOLVED", "EXPECTED", "SNOOZED"];
 export function sortForInbox(alerts: Alert[], statuses: Record<string, AlertStatus>): Alert[] {
   const settled = (a: Alert) => (SETTLED.includes(statuses[a.id] ?? "OPEN") ? 1 : 0);
   return [...alerts].sort((a, b) => settled(a) - settled(b) || b.inrAtRiskTotal - a.inrAtRiskTotal);
-}
-
-/** End of the most recent data hour (the "now" the demo data is anchored to). */
-export function dataEnd(history: CampaignHistory): number {
-  let last = 0;
-  for (const series of Object.values(history)) {
-    const ts = series[series.length - 1]?.ts ?? 0;
-    if (ts > last) last = ts;
-  }
-  return last + HOUR;
 }
 
 /**

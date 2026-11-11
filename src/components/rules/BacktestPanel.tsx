@@ -55,7 +55,7 @@ export function BacktestPanel({
             step={slider.step}
             value={[value]}
             onValueChange={([v]) => onValueChange(+v.toFixed(4))}
-            className="py-3"
+            className="min-h-10 py-3"
           />
           {/* default position marker */}
           <div

@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { generateSeededDemo } from "@/lib/dataGenerator";
 import { detectAll } from "@/lib/detector";
 import type { Alert } from "@/lib/types";
-import { ALERT_BUDGET, dataEnd, splitByAlertBudget, timeAgo } from "./inboxView";
+import { ALERT_BUDGET, dataEnd, mostRecentOpen, splitByAlertBudget, timeAgo } from "./inboxView";
 
 const HOUR = 3_600_000;
 const fake = (id: string, inr: number, startedAt = 0): Alert =>
@@ -31,6 +31,23 @@ describe("dataEnd / timeAgo on the seeded demo", () => {
     const tb = detectAll(history).find((a) => a.failureClass === "TRACKING_BREAK");
     expect(tb).toBeDefined();
     expect(timeAgo(tb!.startedAt, now)).toBe("4h ago");
+  });
+});
+
+describe("mostRecentOpen", () => {
+  const alerts = [fake("old", 1, 1 * HOUR), fake("new", 1, 5 * HOUR), fake("injected", 1, 3 * HOUR)];
+
+  it("prefers the last injected alert while it is open", () => {
+    expect(mostRecentOpen(alerts, {}, "injected")?.id).toBe("injected");
+  });
+
+  it("falls back to the latest onset among open alerts", () => {
+    expect(mostRecentOpen(alerts, { injected: "RESOLVED" }, "injected")?.id).toBe("new");
+    expect(mostRecentOpen(alerts, { new: "SNOOZED" }, null)?.id).toBe("injected");
+  });
+
+  it("is null when nothing is open", () => {
+    expect(mostRecentOpen(alerts, { old: "RESOLVED", new: "ACKED", injected: "EXPECTED" }, null)).toBeNull();
   });
 });
 

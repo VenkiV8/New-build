@@ -1,4 +1,5 @@
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
+import { cn } from "cn";
 import {
   CartesianGrid,
   ComposedChart,
@@ -39,14 +40,19 @@ function ChartTooltip({ active, payload }: TipProps) {
   );
 }
 
+const RANGES = [24, 72] as const;
+type Range = (typeof RANGES)[number];
+
 /** TRACKING_BREAK: rolling conversions vs what billed clicks should have produced. */
-export function TrackingBreakChart({ points }: { points: TrackingPoint[] }) {
+export function TrackingBreakChart({ points: all }: { points: TrackingPoint[] }) {
+  const [range, setRange] = useState<Range>(24);
+  const points = useMemo(() => all.slice(-range), [all, range]);
   const rows: Row[] = useMemo(() => {
     const red = alertOnly(points, (p) => p.actual);
     return points.map((p, i) => ({ ...p, alertActual: red[i] }));
   }, [points]);
   const ranges = useMemo(() => anomalousRanges(points), [points]);
-  const ticks = useMemo(() => hourTicks(points), [points]);
+  const ticks = useMemo(() => hourTicks(points, range === 24 ? 6 : 12), [points, range]);
 
   if (points.length === 0) return null;
   const first = points[0].ts;
@@ -55,8 +61,26 @@ export function TrackingBreakChart({ points }: { points: TrackingPoint[] }) {
   return (
     <figure className="space-y-3">
       <figcaption className="space-y-1.5 text-xs text-slate-600">
-        <span className="block font-medium text-slate-900">
-          Conversions vs what billed clicks should have produced, last 72h
+        <span className="flex items-start justify-between gap-3">
+          <span className="font-medium text-slate-900">
+            Conversions vs what billed clicks should have produced, last {range}h
+          </span>
+          <span role="group" aria-label="Time range" className="flex shrink-0 rounded-lg bg-slate-100 p-0.5">
+            {RANGES.map((r) => (
+              <button
+                key={r}
+                type="button"
+                onClick={() => setRange(r)}
+                aria-pressed={range === r}
+                className={cn(
+                  "min-h-10 min-w-10 rounded-md px-2 text-xs font-medium md:min-h-7",
+                  range === r ? "bg-white text-slate-900 shadow-xs" : "text-slate-500 hover:text-slate-900",
+                )}
+              >
+                {r}h
+              </button>
+            ))}
+          </span>
         </span>
         <span className="flex flex-wrap items-center gap-x-4 gap-y-1">
           <span className="flex items-center gap-1.5">

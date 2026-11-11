@@ -8,14 +8,18 @@ import { InboxHeader } from "@/components/inbox/InboxHeader";
 import { TryThisStrip } from "@/components/inbox/TryThisStrip";
 import { useFreshIds } from "@/hooks/useFreshIds";
 import { useApp } from "@/state/appContext";
-import { dataEnd, splitByAlertBudget, timeAgo } from "@/state/inboxView";
+import { dataEnd, mostRecentOpen, splitByAlertBudget, timeAgo } from "@/state/inboxView";
 import { atRiskNow } from "@/state/protection";
 
 const ADVERTISER = "Arjun's skincare D2C";
 
 export default function InboxPage() {
-  const { history, alerts, statuses, protectedInr, inject, resetDemo } = useApp();
+  const { history, alerts, statuses, protectedInr, inject, lastInjectedId, resetDemo } = useApp();
   const now = useMemo(() => dataEnd(history), [history]);
+  const tryTarget = useMemo(
+    () => mostRecentOpen(alerts, statuses, lastInjectedId),
+    [alerts, statuses, lastInjectedId],
+  );
   const { paged, digest } = useMemo(() => splitByAlertBudget(alerts), [alerts]);
   const risk = useMemo(() => atRiskNow(alerts, statuses), [alerts, statuses]);
   const fresh = useFreshIds(alerts);
@@ -33,9 +37,8 @@ export default function InboxPage() {
   );
 
   return (
-    // Bottom padding reserves room for the fixed demo controls so they never
-    // cover the last card: the floating pill on mobile, the full bar from md.
-    <div className="space-y-5 pb-16 md:pb-28">
+    // Room for the fixed demo controls is reserved by AppLayout (below the footer).
+    <div className="space-y-5">
       <InboxHeader
         advertiser={ADVERTISER}
         atRiskInr={risk.totalInr}
@@ -44,7 +47,7 @@ export default function InboxPage() {
         alertsUsed={paged.length}
       />
 
-      <TryThisStrip onInjectTrackingBreak={() => inject("TRACKING_BREAK")} />
+      <TryThisStrip onInjectTrackingBreak={() => inject("TRACKING_BREAK")} incidentId={tryTarget?.id ?? null} />
 
       <CampaignHealthStrip history={history} />
 

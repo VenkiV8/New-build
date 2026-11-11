@@ -64,7 +64,7 @@ export function CausalTreePanel({ nodes, diagnosis, causes, windowHours }: Props
   const cvr = get("cvr");
 
   return (
-    <section aria-label="Root cause" className="space-y-4 rounded-xl border border-slate-200 bg-white p-4">
+    <section id="root-cause" aria-label="Root cause" className="scroll-mt-28 space-y-4 md:scroll-mt-20 rounded-xl border border-slate-200 bg-white p-4">
       <div>
         <h2 className="text-base font-semibold text-slate-900">Root cause</h2>
         <p className="text-xs text-slate-500">

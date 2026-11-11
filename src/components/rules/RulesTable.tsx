@@ -53,13 +53,15 @@ export function RulesTable({ rules, selected, onSelect, onToggle }: Props) {
                 </span>
                 <span className="hidden text-slate-600 md:block">{RULE_CHANNEL[r.failureClass]}</span>
               </button>
-              <div className="flex w-10 justify-end">
+              {/* 40×40 hit area around the small switch (label activates it) */}
+              <label htmlFor={`rule-switch-${r.failureClass}`} className="flex size-10 cursor-pointer items-center justify-end">
                 <Switch
+                  id={`rule-switch-${r.failureClass}`}
                   checked={r.enabled}
                   onCheckedChange={(on) => onToggle(r.failureClass, on)}
                   aria-label={`${r.label} rule ${r.enabled ? "on" : "off"}`}
                 />
-              </div>
+              </label>
             </li>
           );
         })}

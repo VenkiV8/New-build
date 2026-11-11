@@ -1,5 +1,5 @@
 // Pure view helpers for the Incident Inbox. No React here.
-import type { Alert, CampaignHistory } from "@/lib/types";
+import type { Alert, AlertStatus, CampaignHistory } from "@/lib/types";
 
 /** Global guardrail from SPEC: at most 5 alerts/day per advertiser page you. */
 export const ALERT_BUDGET = 5;
@@ -23,6 +23,21 @@ export function dataEnd(history: CampaignHistory): number {
     if (ts > last) last = ts;
   }
   return last + HOUR;
+}
+
+/**
+ * The incident the "Try this" strip should open: the last injected alert if it is
+ * still open, otherwise the open alert with the latest onset; null if none open.
+ */
+export function mostRecentOpen(
+  alerts: Alert[],
+  statuses: Record<string, AlertStatus>,
+  preferId: string | null,
+): Alert | null {
+  const open = alerts.filter((a) => (statuses[a.id] ?? "OPEN") === "OPEN");
+  const preferred = preferId ? open.find((a) => a.id === preferId) : undefined;
+  if (preferred) return preferred;
+  return open.reduce<Alert | null>((best, a) => (!best || a.startedAt > best.startedAt ? a : best), null);
 }
 
 /** Compact relative time, e.g. "just now", "4h ago", "2d ago". */

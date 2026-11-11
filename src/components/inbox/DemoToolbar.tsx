@@ -15,7 +15,7 @@ interface Props {
 }
 
 /**
- * Desktop (md+): bar fixed to the viewport bottom; InboxPage reserves md:pb-28.
+ * Desktop (md+): bar fixed to the viewport bottom; AppLayout reserves md:pb-28 on the inbox.
  * Mobile (<768px): a small floating "Demo ▸" pill that expands into the full
  * controls and collapses again after an inject or reset.
  */

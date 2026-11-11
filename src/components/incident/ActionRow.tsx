@@ -14,7 +14,13 @@ export function ActionRow({ actions, status, onAction }: Props) {
     <section aria-label="Actions" className="space-y-2">
       <div className="flex flex-wrap gap-2">
         {actions.map((a, i) => (
-          <Button key={a} variant={i === 0 ? "default" : "outline"} disabled={!open} onClick={() => onAction(a)}>
+          <Button
+            key={a}
+            variant={i === 0 ? "default" : "outline"}
+            disabled={!open}
+            onClick={() => onAction(a)}
+            className="h-10 md:h-8"
+          >
             {a}
           </Button>
         ))}

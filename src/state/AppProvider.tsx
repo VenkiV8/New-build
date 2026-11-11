@@ -26,6 +26,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const [data, setData] = useState<Data>(seededData);
   const [statuses, setStatuses] = useState<Record<string, AlertStatus>>({});
   const [protectedInr, setProtectedInr] = useState(0);
+  const [lastInjectedId, setLastInjectedId] = useState<string | null>(null);
 
   const applyAction = useCallback(
     (alertId: string, action: string) => {
@@ -70,6 +71,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
         (a) => a.failureClass === failureClass && a.campaignId === injection.campaignId,
       );
       if (added) {
+        setLastInjectedId(added.id);
         toast.error(`${added.severity} · ${classLabel(added.failureClass)}: ${campaignName(added.campaignId)}`, {
           description: `${formatInr(added.inrAtRiskPerHour)}/h at risk. ${added.headline}`,
         });
@@ -96,6 +98,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     setData(seededData());
     setStatuses({});
     setProtectedInr(0);
+    setLastInjectedId(null);
     toast.success("Demo reset", { description: "Back to the 3 seeded incidents, all rules on." });
   }, []);
 
@@ -108,10 +111,11 @@ export function AppProvider({ children }: { children: ReactNode }) {
       protectedInr,
       applyAction,
       inject,
+      lastInjectedId,
       setRuleEnabled,
       resetDemo,
     }),
-    [data, statuses, protectedInr, applyAction, inject, setRuleEnabled, resetDemo],
+    [data, statuses, protectedInr, applyAction, inject, lastInjectedId, setRuleEnabled, resetDemo],
   );
 
   return <AppContext.Provider value={value}>{children}</AppContext.Provider>;

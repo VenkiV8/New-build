@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { DEMO_NOW_TS, demoNow, generateSeededDemo, istParts } from "@/lib/dataGenerator";
 import { detectAll } from "@/lib/detector";
 import type { Alert } from "@/lib/types";
-import { ALERT_BUDGET, mostRecentOpen, sortForInbox, splitByAlertBudget, timeAgo } from "./inboxView";
+import { ALERT_BUDGET, mostRecentOpen, sortForInbox, splitByAlertBudget, startedAgo, timeAgo } from "./inboxView";
 
 const HOUR = 3_600_000;
 const fake = (id: string, inr: number, startedAt = 0): Alert =>
@@ -24,13 +24,21 @@ describe("splitByAlertBudget", () => {
   });
 });
 
-describe("timeAgo on the seeded demo (against demoNow)", () => {
-  it("dates the tracking break (onset 5 PM IST) as 3h before the fixed 8 PM IST demo clock", () => {
-    const history = generateSeededDemo();
-    const tb = detectAll(history).find((a) => a.failureClass === "TRACKING_BREAK");
-    expect(tb).toBeDefined();
-    expect(istParts(tb!.startedAt).hours).toBe(17);
-    expect(timeAgo(tb!.startedAt, demoNow())).toBe("3h ago");
+describe("startedAgo on the seeded demo (end of the 8 PM IST data hour)", () => {
+  it.each([
+    ["TRACKING_BREAK", "4h ago", "for 4h"],
+    ["SPEND_RUNAWAY", "2h ago", "in 2h"],
+    ["DRIFT", "3h ago", "for 3h"],
+  ] as const)("%s reads %s, matching its headline duration", (fc, ago, headlinePart) => {
+    const alert = detectAll(generateSeededDemo()).find((a) => a.failureClass === fc);
+    expect(alert).toBeDefined();
+    expect(startedAgo(alert!.startedAt)).toBe(ago);
+    expect(alert!.headline).toContain(headlinePart);
+  });
+
+  it("tracking break onset is 5 PM IST", () => {
+    const tb = detectAll(generateSeededDemo()).find((a) => a.failureClass === "TRACKING_BREAK")!;
+    expect(istParts(tb.startedAt).hours).toBe(17);
   });
 
   it("does not depend on the wall clock", () => {

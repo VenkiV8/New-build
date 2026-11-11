@@ -1,4 +1,5 @@
 // Pure view helpers for the Incident Inbox. No React here.
+import { demoNow } from "@/lib/dataGenerator";
 import type { Alert, AlertStatus } from "@/lib/types";
 
 /** Global guardrail from SPEC: at most 5 alerts/day per advertiser page you. */
@@ -36,6 +37,15 @@ export function mostRecentOpen(
   const preferred = preferId ? open.find((a) => a.id === preferId) : undefined;
   if (preferred) return preferred;
   return open.reduce<Alert | null>((best, a) => (!best || a.startedAt > best.startedAt ? a : best), null);
+}
+
+/**
+ * "started Xh ago" for an alert: measured from the END of the last data hour
+ * (demoNow() is the start of the 8 PM hour, so the end is demoNow() + 1h).
+ * This matches the headline durations, e.g. "0 for 4h" → "started 4h ago".
+ */
+export function startedAgo(startedAt: number): string {
+  return timeAgo(startedAt, demoNow() + HOUR);
 }
 
 /** Compact relative time, e.g. "just now", "4h ago", "2d ago". */

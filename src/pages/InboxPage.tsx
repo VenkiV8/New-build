@@ -1,6 +1,6 @@
 import { useMemo } from "react";
 import { ShieldCheck } from "lucide-react";
-import { CAMPAIGNS, demoNow } from "@/lib/dataGenerator";
+import { CAMPAIGNS } from "@/lib/dataGenerator";
 import { AlertCard } from "@/components/inbox/AlertCard";
 import { CampaignHealthStrip } from "@/components/inbox/CampaignHealthStrip";
 import { DemoToolbar } from "@/components/inbox/DemoToolbar";
@@ -9,13 +9,11 @@ import { TryThisStrip } from "@/components/inbox/TryThisStrip";
 import { useFreshIds } from "@/hooks/useFreshIds";
 import { ADVERTISER } from "@/state/account";
 import { useApp } from "@/state/appContext";
-import { mostRecentOpen, sortForInbox, splitByAlertBudget, timeAgo } from "@/state/inboxView";
+import { mostRecentOpen, sortForInbox, splitByAlertBudget, startedAgo } from "@/state/inboxView";
 import { atRiskNow } from "@/state/protection";
 
 export default function InboxPage() {
   const { history, alerts, statuses, protectedInr, inject, lastInjectedId, resetDemo } = useApp();
-  // Relative times are measured against the fixed demo clock, never Date.now().
-  const now = demoNow();
   const tryTarget = useMemo(
     () => mostRecentOpen(alerts, statuses, lastInjectedId),
     [alerts, statuses, lastInjectedId],
@@ -33,7 +31,7 @@ export default function InboxPage() {
       <AlertCard
         alert={a}
         status={statuses[a.id] ?? "OPEN"}
-        startedAgo={timeAgo(a.startedAt, now)}
+        startedAgo={startedAgo(a.startedAt)}
         fresh={fresh.has(a.id)}
         muted={muted}
       />

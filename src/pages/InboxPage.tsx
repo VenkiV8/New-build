@@ -8,14 +8,16 @@ import { InboxHeader } from "@/components/inbox/InboxHeader";
 import { TryThisStrip } from "@/components/inbox/TryThisStrip";
 import { useFreshIds } from "@/hooks/useFreshIds";
 import { useApp } from "@/state/appContext";
-import { dataEnd, protectedThisWeek, splitByAlertBudget, timeAgo } from "@/state/inboxView";
+import { dataEnd, splitByAlertBudget, timeAgo } from "@/state/inboxView";
+import { atRiskNow } from "@/state/protection";
 
 const ADVERTISER = "Arjun's skincare D2C";
 
 export default function InboxPage() {
-  const { history, alerts, statuses, inject, resetDemo } = useApp();
+  const { history, alerts, statuses, protectedInr, inject, resetDemo } = useApp();
   const now = useMemo(() => dataEnd(history), [history]);
   const { paged, digest } = useMemo(() => splitByAlertBudget(alerts), [alerts]);
+  const risk = useMemo(() => atRiskNow(alerts, statuses), [alerts, statuses]);
   const fresh = useFreshIds(alerts);
 
   const card = (a: (typeof alerts)[number], muted = false) => (
@@ -31,11 +33,14 @@ export default function InboxPage() {
   );
 
   return (
-    <div className="space-y-5">
+    // Bottom padding reserves room for the fixed demo-controls bar (2 rows of
+    // buttons on mobile, 1 row from sm) so it never covers the last card.
+    <div className="space-y-5 pb-44 sm:pb-28">
       <InboxHeader
         advertiser={ADVERTISER}
-        protectedInr={protectedThisWeek(alerts, now)}
-        incidentCount={alerts.length}
+        atRiskInr={risk.totalInr}
+        openCount={risk.openCount}
+        protectedInr={protectedInr}
         alertsUsed={paged.length}
       />
 

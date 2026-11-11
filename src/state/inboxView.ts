@@ -5,7 +5,6 @@ import type { Alert, CampaignHistory } from "@/lib/types";
 export const ALERT_BUDGET = 5;
 
 const HOUR = 3_600_000;
-const WEEK = 7 * 24 * HOUR;
 
 /**
  * Split alerts by the alert budget: the top 5 by ₹ at risk page the advertiser,
@@ -24,13 +23,6 @@ export function dataEnd(history: CampaignHistory): number {
     if (ts > last) last = ts;
   }
   return last + HOUR;
-}
-
-/** ₹ at risk caught by incidents that started in the 7 days before `now`. */
-export function protectedThisWeek(alerts: Alert[], now: number): number {
-  return alerts
-    .filter((a) => a.startedAt >= now - WEEK)
-    .reduce((sum, a) => sum + a.inrAtRiskTotal, 0);
 }
 
 /** Compact relative time, e.g. "just now", "4h ago", "2d ago". */

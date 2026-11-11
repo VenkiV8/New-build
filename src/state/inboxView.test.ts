@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { generateSeededDemo } from "@/lib/dataGenerator";
 import { detectAll } from "@/lib/detector";
 import type { Alert } from "@/lib/types";
-import { ALERT_BUDGET, dataEnd, protectedThisWeek, splitByAlertBudget, timeAgo } from "./inboxView";
+import { ALERT_BUDGET, dataEnd, splitByAlertBudget, timeAgo } from "./inboxView";
 
 const HOUR = 3_600_000;
 const fake = (id: string, inr: number, startedAt = 0): Alert =>
@@ -39,13 +39,5 @@ describe("timeAgo", () => {
     expect(timeAgo(0, 30 * 60_000)).toBe("just now");
     expect(timeAgo(0, 3 * HOUR)).toBe("3h ago");
     expect(timeAgo(0, 50 * HOUR)).toBe("2d ago");
-  });
-});
-
-describe("protectedThisWeek", () => {
-  it("sums ₹ at risk for incidents started in the last 7 days only", () => {
-    const now = 10 * 24 * HOUR;
-    const alerts = [fake("new", 500, now - 2 * HOUR), fake("old", 900, now - 8 * 24 * HOUR)];
-    expect(protectedThisWeek(alerts, now)).toBe(500);
   });
 });

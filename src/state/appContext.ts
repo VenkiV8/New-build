@@ -7,6 +7,10 @@ export interface AppState {
   alerts: Alert[];
   /** alertId → status; alerts missing from the map are OPEN */
   statuses: Record<string, AlertStatus>;
+  /** ₹/day exposure stopped by fixes this session (resets with the demo) */
+  protectedInr: number;
+  /** apply a suggested action: sets the alert's status; fixes add to protectedInr */
+  applyAction: (alertId: string, action: string) => void;
   inject: (failureClass: InjectableClass) => void;
   resetDemo: () => void;
 }

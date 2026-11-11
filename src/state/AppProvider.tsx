@@ -6,6 +6,7 @@ import type { Alert, AlertStatus, CampaignHistory, FailureClass } from "@/lib/ty
 import { formatInr } from "@/utils/format";
 import { AppContext, type AppState } from "./appContext";
 import { newAlerts, pickInjection, type InjectableClass } from "./injection";
+import { exposureStopped, statusForAction } from "./protection";
 
 interface Data {
   history: CampaignHistory;
@@ -23,6 +24,25 @@ const classLabel = (fc: FailureClass) => DEFAULT_RULES.find((r) => r.failureClas
 export function AppProvider({ children }: { children: ReactNode }) {
   const [data, setData] = useState<Data>(seededData);
   const [statuses, setStatuses] = useState<Record<string, AlertStatus>>({});
+  const [protectedInr, setProtectedInr] = useState(0);
+
+  const applyAction = useCallback(
+    (alertId: string, action: string) => {
+      const alert = data.alerts.find((a) => a.id === alertId);
+      if (!alert) return;
+      const next = statusForAction(action);
+      const wasResolved = statuses[alertId] === "RESOLVED";
+      setStatuses((s) => ({ ...s, [alertId]: next }));
+      if (next === "RESOLVED" && !wasResolved) {
+        const stopped = exposureStopped(alert);
+        setProtectedInr((p) => p + stopped);
+        toast.success(`${formatInr(stopped)}/day exposure stopped`, {
+          description: `${action}: ${campaignName(alert.campaignId)}`,
+        });
+      }
+    },
+    [data.alerts, statuses],
+  );
 
   const inject = useCallback(
     (failureClass: InjectableClass) => {
@@ -50,12 +70,21 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const resetDemo = useCallback(() => {
     setData(seededData());
     setStatuses({});
+    setProtectedInr(0);
     toast.success("Demo reset", { description: "Back to the 3 seeded incidents." });
   }, []);
 
   const value = useMemo<AppState>(
-    () => ({ history: data.history, alerts: data.alerts, statuses, inject, resetDemo }),
-    [data, statuses, inject, resetDemo],
+    () => ({
+      history: data.history,
+      alerts: data.alerts,
+      statuses,
+      protectedInr,
+      applyAction,
+      inject,
+      resetDemo,
+    }),
+    [data, statuses, protectedInr, applyAction, inject, resetDemo],
   );
 
   return <AppContext.Provider value={value}>{children}</AppContext.Provider>;

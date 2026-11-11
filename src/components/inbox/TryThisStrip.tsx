@@ -27,7 +27,7 @@ export function TryThisStrip({ onInjectTrackingBreak }: { onInjectTrackingBreak:
           <button
             type="button"
             onClick={onInjectTrackingBreak}
-            className="font-medium text-slate-900 underline decoration-slate-300 underline-offset-2 hover:decoration-slate-900"
+            className="inline-flex min-h-10 items-center font-medium text-slate-900 underline decoration-slate-300 underline-offset-2 hover:decoration-slate-900 md:min-h-0"
           >
             Inject a tracking break
           </button>
@@ -42,7 +42,7 @@ export function TryThisStrip({ onInjectTrackingBreak }: { onInjectTrackingBreak:
           <span className="mr-1.5 font-semibold text-slate-400 tabular-nums">4</span>
           <Link
             to="/rules"
-            className="font-medium text-slate-900 underline decoration-slate-300 underline-offset-2 hover:decoration-slate-900"
+            className="inline-flex min-h-10 items-center font-medium text-slate-900 underline decoration-slate-300 underline-offset-2 hover:decoration-slate-900 md:min-h-0"
           >
             Tune the rule in Sandbox
           </Link>

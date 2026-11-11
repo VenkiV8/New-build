@@ -3,7 +3,7 @@ import { ChevronRight } from "lucide-react";
 import { cn } from "cn";
 import { CAMPAIGNS } from "@/lib/dataGenerator";
 import type { Alert, AlertStatus } from "@/lib/types";
-import { failureClassLabel, STATUS_LABELS } from "@/components/alerts/alertMeta";
+import { caughtAfterOnset, failureClassLabel, STATUS_LABELS } from "@/components/alerts/alertMeta";
 import { FailureClassIcon } from "@/components/alerts/FailureClassIcon";
 import { SeverityChip } from "@/components/alerts/SeverityChip";
 import { formatInr } from "@/utils/format";
@@ -41,6 +41,8 @@ export function AlertCard({ alert, status, startedAgo, fresh, muted }: Props) {
             </span>
             <span className="text-slate-400">·</span>
             <span>started {startedAgo}</span>
+            <span className="text-slate-400">·</span>
+            <span>{caughtAfterOnset(alert.failureClass)}</span>
           </div>
           <p className="truncate text-sm font-semibold text-slate-900">{campaign}</p>
           <p className={cn("text-sm text-slate-600", closed && "text-slate-500")}>{alert.headline}</p>

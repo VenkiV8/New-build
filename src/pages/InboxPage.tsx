@@ -33,9 +33,9 @@ export default function InboxPage() {
   );
 
   return (
-    // Bottom padding reserves room for the fixed demo-controls bar (2 rows of
-    // buttons on mobile, 1 row from sm) so it never covers the last card.
-    <div className="space-y-5 pb-44 sm:pb-28">
+    // Bottom padding reserves room for the fixed demo controls so they never
+    // cover the last card: the floating pill on mobile, the full bar from md.
+    <div className="space-y-5 pb-16 md:pb-28">
       <InboxHeader
         advertiser={ADVERTISER}
         atRiskInr={risk.totalInr}

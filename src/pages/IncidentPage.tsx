@@ -1,7 +1,7 @@
 import { useMemo } from "react";
 import { Link, useParams } from "react-router-dom";
 import { ArrowLeft } from "lucide-react";
-import { failureClassLabel, STATUS_LABELS } from "@/components/alerts/alertMeta";
+import { caughtAfterOnset, failureClassLabel, STATUS_LABELS } from "@/components/alerts/alertMeta";
 import { FailureClassIcon } from "@/components/alerts/FailureClassIcon";
 import { SeverityChip } from "@/components/alerts/SeverityChip";
 import { ActionRow } from "@/components/incident/ActionRow";
@@ -88,6 +88,7 @@ export default function IncidentPage() {
             <dt className="text-xs text-slate-500">Started</dt>
             <dd className="text-sm font-semibold text-slate-900">{timeAgo(alert.startedAt, dataEnd(history))}</dd>
             <dd className="text-xs text-slate-500">{formatDateTime(alert.startedAt)}</dd>
+            <dd className="text-xs text-slate-500">{caughtAfterOnset(alert.failureClass)}</dd>
           </div>
         </dl>
         <p className="text-sm text-slate-600">{alert.explanation}</p>

@@ -26,7 +26,7 @@ export function CampaignHealthStrip({ history }: { history: CampaignHistory }) {
                 <button
                   type="button"
                   className={cn(
-                    "flex max-w-full items-center gap-1.5 rounded-full border bg-white px-3 py-1.5 text-left text-xs text-slate-700 shadow-xs focus-visible:ring-2 focus-visible:ring-slate-400 focus-visible:outline-none",
+                    "flex min-h-10 max-w-full items-center gap-1.5 rounded-full border bg-white px-3 py-1.5 md:min-h-0 text-left text-xs text-slate-700 shadow-xs focus-visible:ring-2 focus-visible:ring-slate-400 focus-visible:outline-none",
                     hasFallback ? "border-amber-300 hover:border-amber-400" : "border-slate-200 hover:border-slate-300",
                   )}
                 >

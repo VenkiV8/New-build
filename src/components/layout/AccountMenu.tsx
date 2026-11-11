@@ -22,9 +22,9 @@ export function AccountMenu({ asOf }: { asOf: string | null }) {
         <p className="text-sm font-semibold text-slate-900">{ADVERTISER}</p>
         <p className="text-xs text-slate-500">Advertiser account on BudgetPager</p>
         <dl className="mt-3 space-y-1.5 border-t border-slate-100 pt-3 text-sm text-slate-700">
-          <div>
-            <dt className="sr-only">Owner</dt>
-            <dd>Owner: {OWNER}</dd>
+          <div className="flex gap-1">
+            <dt>Owner:</dt>
+            <dd>{OWNER}</dd>
           </div>
           <div>
             <dt className="sr-only">Campaigns and budget</dt>

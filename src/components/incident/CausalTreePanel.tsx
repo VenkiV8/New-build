@@ -34,7 +34,10 @@ function NodeCard({ node }: { node: TreeNode }) {
       <div className="mt-2 flex items-baseline justify-between gap-2">
         <p className="text-sm tabular-nums">
           <span className="font-semibold text-slate-900">{formatMetric(node.actual, node.unit)}</span>
-          <span className="text-slate-500"> vs {formatMetric(node.expected, node.unit)}</span>
+          <span className={node.isDriver ? "text-slate-600" : "text-slate-500"}>
+            {" "}
+            vs {formatMetric(node.expected, node.unit)}
+          </span>
         </p>
         <span
           className={cn(

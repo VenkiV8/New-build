@@ -29,8 +29,32 @@ with a diagnosis and a one-tap fix. Severity is measured in ₹ at risk, not met
 - 3 pre-seeded incidents in the last 48h (one tracking break, one spend runaway, one CTR drift)
   so the inbox is never empty on first load.
 
-## Screens (4)
-### 1. Incident Inbox (home, route /)
+## Screens (landing + 4)
+### Top bar (every page)
+- Left: "BudgetPager" logo, linking to / (the landing page). Nav: Inbox (/inbox), Rules (/rules), Notifications (/notifications).
+- Right: "Data as of 8:00 PM" with a clock icon (desktop; on smaller screens it moves into the account menu),
+  then:
+  - Bell icon button with a red badge showing the count of OPEN alerts (badge hidden at 0),
+    aria-label "Open alerts: N"; links to /inbox.
+  - Avatar circle with initials "AC" opening a small read-only popover: "Aura & Co. Skincare",
+    "Advertiser account on BudgetPager", "Owner: Arjun Mehta", "4 campaigns · ₹7,000/day total budget",
+    "Data as of 8:00 PM". No sign-out or settings items (nothing fake that does nothing).
+  - Both are ≥40px tap targets. Adding them does not change the top bar's height.
+- Account details (advertiser, owner, total daily budget) come from one shared module (src/state/account.ts).
+
+### 0. Landing (route /)
+- Single screen, no scrolling at 375px or 1280px, same theme.
+- Eyebrow "BudgetPager · on-call for your ad budget"; H1 "Aura & Co. Skincare" with a small slate
+  "(fictional brand · demo account)" under it.
+- Description: "BudgetPager watches your campaigns around the clock and pages you only when money is at
+  risk, with the likely cause and a one-tap fix."
+- Three live stat chips from app state: "{n} open incidents", "₹{x} at risk now" (same OPEN-alert
+  numbers as the inbox header), "4 campaigns monitored", with icons matching the inbox.
+- Primary button (blue accent, ≥44px tall) "Open alerts inbox →" to /inbox; secondary text link
+  "Tune alert rules" to /rules. Footer line stays.
+- Unknown URLs redirect here. Deep links /inbox, /incident/:id, /rules and /notifications work directly.
+
+### 1. Incident Inbox (route /inbox)
 - Header: advertiser name and three stats:
   "At risk now" = sum of inrAtRiskTotal for OPEN alerts, subtitle "across N open incidents";
   "Protected this session" = starts at ₹0; when an action resolves an alert (Pause / Cap budget /

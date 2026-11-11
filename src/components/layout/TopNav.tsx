@@ -24,7 +24,7 @@ export function TopNav() {
       {/* Row height stays 40px + py-2 (mobile) and 40px + md:py-2 (desktop, was 32px + py-3): no shift. */}
       <div className="mx-auto flex max-w-5xl flex-wrap items-center gap-x-6 gap-y-1 px-4 py-2">
         <Link
-          to="/inbox"
+          to="/"
           className="inline-flex min-h-10 items-center text-base font-semibold tracking-tight text-white md:min-h-0"
         >
           BudgetPager

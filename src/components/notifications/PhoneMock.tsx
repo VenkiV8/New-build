@@ -44,7 +44,7 @@ export function PhoneMock({ alert, paused, onPause }: Props) {
                   <p className="font-medium">{campaign}</p>
                   <p className="mt-1">{alert.headline}</p>
                   <p className="mt-1 font-semibold tabular-nums">{formatInr(alert.inrAtRiskPerHour)}/h at risk</p>
-                  <p className="mt-1 text-right text-[10px] text-slate-400">{formatClockTime(caughtAt(alert))}</p>
+                  <p className="mt-1 text-right text-[10px] text-slate-500">{formatClockTime(caughtAt(alert))}</p>
                 </div>
                 <div className="grid grid-cols-2 gap-2" aria-label="Quick replies">
                   {paused ? (

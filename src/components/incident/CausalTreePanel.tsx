@@ -29,7 +29,8 @@ function NodeCard({ node }: { node: TreeNode }) {
           </span>
         )}
       </div>
-      <p className="text-[11px] text-slate-400">{node.formula}</p>
+      {/* slate-500 meets AA on white/amber-50; on the driver's red-50 it needs slate-600 */}
+      <p className={cn("text-[11px]", node.isDriver ? "text-slate-600" : "text-slate-500")}>{node.formula}</p>
       <div className="mt-2 flex items-baseline justify-between gap-2">
         <p className="text-sm tabular-nums">
           <span className="font-semibold text-slate-900">{formatMetric(node.actual, node.unit)}</span>

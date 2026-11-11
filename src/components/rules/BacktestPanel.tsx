@@ -71,12 +71,12 @@ export function BacktestPanel({
           </div>
           {/* End labels: desktop only (formats can be long), and not when "Default" sits at that end */}
           {defaultPct > 25 && (
-            <span className="absolute top-8 left-0 hidden text-[11px] text-slate-400 tabular-nums md:block">
+            <span className="absolute top-8 left-0 hidden text-[11px] text-slate-500 tabular-nums md:block">
               {slider.format(slider.min)}
             </span>
           )}
           {defaultPct < 75 && (
-            <span className="absolute top-8 right-0 hidden text-[11px] text-slate-400 tabular-nums md:block">
+            <span className="absolute top-8 right-0 hidden text-[11px] text-slate-500 tabular-nums md:block">
               {slider.format(slider.max)}
             </span>
           )}
@@ -107,7 +107,7 @@ export function BacktestPanel({
               <dt className="text-xs text-slate-500">Real incidents caught</dt>
               <dd className="text-3xl font-semibold text-slate-900 tabular-nums">
                 {recall.caught}
-                <span className="text-lg text-slate-400"> / {recall.planted}</span>
+                <span className="text-lg text-slate-500"> / {recall.planted}</span>
               </dd>
               <dd className="text-xs text-slate-500">planted incidents</dd>
             </div>

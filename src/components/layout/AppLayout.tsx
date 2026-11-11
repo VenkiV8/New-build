@@ -9,7 +9,7 @@ export function AppLayout() {
   useScrollOnNavigate();
   // The inbox has fixed demo controls (pill on mobile, bar from md); reserve room
   // below the footer so they never cover content.
-  const isInbox = useLocation().pathname === "/";
+  const isInbox = useLocation().pathname === "/inbox";
 
   return (
     <div className={cn("flex min-h-dvh flex-col bg-slate-50 text-slate-900", isInbox && "pb-16 md:pb-28")}>
@@ -19,7 +19,7 @@ export function AppLayout() {
           <Outlet />
         </Suspense>
       </main>
-      <footer className="mx-auto w-full max-w-5xl px-4 pt-2 pb-6 text-center text-xs text-slate-400">
+      <footer className="mx-auto w-full max-w-5xl px-4 pt-2 pb-6 text-center text-xs text-slate-500">
         Prototype · synthetic data, generated in-browser · no backend
       </footer>
     </div>

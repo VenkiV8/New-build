@@ -7,11 +7,10 @@ import { DemoToolbar } from "@/components/inbox/DemoToolbar";
 import { InboxHeader } from "@/components/inbox/InboxHeader";
 import { TryThisStrip } from "@/components/inbox/TryThisStrip";
 import { useFreshIds } from "@/hooks/useFreshIds";
+import { ADVERTISER } from "@/state/account";
 import { useApp } from "@/state/appContext";
 import { dataEnd, mostRecentOpen, sortForInbox, splitByAlertBudget, timeAgo } from "@/state/inboxView";
 import { atRiskNow } from "@/state/protection";
-
-const ADVERTISER = "Arjun's skincare D2C";
 
 export default function InboxPage() {
   const { history, alerts, statuses, protectedInr, inject, lastInjectedId, resetDemo } = useApp();

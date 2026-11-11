@@ -31,7 +31,7 @@ import { formatDateTime, formatInr } from "@/utils/format";
 
 function BackLink() {
   return (
-    <Link to="/" className="inline-flex min-h-10 items-center gap-1 text-sm text-slate-500 hover:text-slate-900 md:min-h-0">
+    <Link to="/inbox" className="inline-flex min-h-10 items-center gap-1 text-sm text-slate-500 hover:text-slate-900 md:min-h-0">
       <ArrowLeft className="size-4" aria-hidden /> Inbox
     </Link>
   );

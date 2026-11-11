@@ -4,11 +4,10 @@ import { ChannelMatrix } from "@/components/notifications/ChannelMatrix";
 import { DigestEmailMock } from "@/components/notifications/DigestEmailMock";
 import { NoiseControls } from "@/components/notifications/NoiseControls";
 import { PhoneMock } from "@/components/notifications/PhoneMock";
+import { ADVERTISER } from "@/state/account";
 import { useApp } from "@/state/appContext";
 import { dataEnd } from "@/state/inboxView";
 import { buildDigest, whatsAppAlert } from "@/state/notificationView";
-
-const ADVERTISER = "Arjun's skincare D2C";
 
 export default function NotificationsPage() {
   const { history, alerts, statuses, applyAction } = useApp();

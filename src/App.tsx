@@ -3,6 +3,7 @@ import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { Toaster } from "@/components/ui/sonner";
 import InboxPage from "@/pages/InboxPage";
+import LandingPage from "@/pages/LandingPage";
 import { AppProvider } from "@/state/AppProvider";
 
 // Chart-heavy pages are lazy so Recharts stays out of the initial bundle.
@@ -16,7 +17,8 @@ export default function App() {
       <BrowserRouter>
         <Routes>
           <Route element={<AppLayout />}>
-            <Route index element={<InboxPage />} />
+            <Route index element={<LandingPage />} />
+            <Route path="inbox" element={<InboxPage />} />
             <Route path="incident/:id" element={<IncidentPage />} />
             <Route path="rules" element={<RulesPage />} />
             <Route path="notifications" element={<NotificationsPage />} />

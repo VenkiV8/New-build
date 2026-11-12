@@ -1,28 +1,25 @@
-import { useMemo, type ReactNode } from "react";
-import { Link } from "react-router-dom";
-import { Inbox, ShieldCheck, TriangleAlert } from "lucide-react";
-import { CAMPAIGNS } from "@/lib/dataGenerator";
+import { useMemo } from "react";
+import { AttentionBanner } from "@/components/landing/AttentionBanner";
+import { CampaignTable } from "@/components/landing/CampaignTable";
+import { CapabilityRows } from "@/components/landing/CapabilityRows";
 import { ADVERTISER } from "@/state/account";
 import { useApp } from "@/state/appContext";
+import { campaignOverview } from "@/state/landingView";
 import { atRiskNow } from "@/state/protection";
-import { formatInr } from "@/utils/format";
-
-function StatChip({ icon, children }: { icon: ReactNode; children: ReactNode }) {
-  return (
-    <li className="inline-flex items-center gap-1.5 rounded-full border border-slate-200 bg-white px-3 py-1.5 text-sm text-slate-700 tabular-nums">
-      {icon}
-      {children}
-    </li>
-  );
-}
 
 export default function LandingPage() {
-  const { alerts, statuses } = useApp();
+  const { history, alerts, statuses, campaignState } = useApp();
+  // Live: recomputed on every inject / action / reset.
+  const rows = useMemo(
+    () => campaignOverview(history, alerts, statuses, campaignState),
+    [history, alerts, statuses, campaignState],
+  );
   const risk = useMemo(() => atRiskNow(alerts, statuses), [alerts, statuses]);
+  const needAttention = rows.filter((r) => r.activeAlerts.length > 0).length;
 
   return (
-    <section className="max-w-2xl space-y-6 py-2 md:py-8">
-      <div className="space-y-3">
+    <div className="space-y-6 py-2 md:py-6">
+      <section className="max-w-2xl space-y-3">
         <p className="text-xs font-medium tracking-wide text-slate-500 uppercase">
           BudgetPager · on-call for your ad budget
         </p>
@@ -34,41 +31,13 @@ export default function LandingPage() {
           BudgetPager watches your campaigns around the clock and pages you only when money is at risk, with the
           likely cause and a one-tap fix.
         </p>
-      </div>
+      </section>
 
-      <ul aria-label="Account status" className="flex flex-wrap gap-2">
-        <StatChip icon={<Inbox className="size-4 text-slate-500" aria-hidden />}>
-          <span>
-            <span className="font-semibold text-slate-900">{risk.activeCount}</span> open incident
-            {risk.activeCount === 1 ? "" : "s"}
-          </span>
-        </StatChip>
-        <StatChip icon={<TriangleAlert className="size-4 text-sev1" aria-hidden />}>
-          <span>
-            <span className="font-semibold text-slate-900">{formatInr(risk.totalInr)}</span> at risk now
-          </span>
-        </StatChip>
-        <StatChip icon={<ShieldCheck className="size-4 text-ok" aria-hidden />}>
-          <span>
-            <span className="font-semibold text-slate-900">{CAMPAIGNS.length}</span> campaigns monitored
-          </span>
-        </StatChip>
-      </ul>
+      <CampaignTable rows={rows} />
 
-      <div className="flex flex-wrap items-center gap-x-6 gap-y-3">
-        <Link
-          to="/inbox"
-          className="inline-flex min-h-11 items-center rounded-lg bg-brand px-5 text-sm font-semibold text-white shadow-sm hover:bg-brand-ink focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2 focus-visible:outline-none"
-        >
-          Open alerts inbox →
-        </Link>
-        <Link
-          to="/rules"
-          className="inline-flex min-h-10 items-center text-sm font-medium text-brand underline decoration-brand/40 underline-offset-2 hover:decoration-brand"
-        >
-          Tune alert rules
-        </Link>
-      </div>
-    </section>
+      <AttentionBanner campaignsNeedingAttention={needAttention} atRiskInr={risk.totalInr} />
+
+      <CapabilityRows />
+    </div>
   );
 }

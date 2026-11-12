@@ -1,11 +1,11 @@
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { CircleAlert, CircleCheck } from "lucide-react";
 import { cn } from "cn";
 import { CAMPAIGNS } from "@/lib/dataGenerator";
 import { evaluateEligibility } from "@/lib/eligibility";
 import type { CampaignHistory, RuleConfig } from "@/lib/types";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { healthSummary } from "@/state/inboxView";
+import { healthStripSummary, healthSummary } from "@/state/inboxView";
 import type { CampaignState } from "@/state/protection";
 
 const STATE_LABEL: Record<Exclude<CampaignState, "active">, string> = {
@@ -30,10 +30,33 @@ export function CampaignHealthStrip({ history, rules, campaignState }: Props) {
     return all.sort((a, b) => Number(b.hasFallback) - Number(a.hasFallback));
   }, [history]);
   const rulesOff = rules.filter((r) => !r.enabled);
+  // Mobile only: collapsed into one chip until tapped; desktop always shows every chip.
+  const [expanded, setExpanded] = useState(false);
+  const onFallback = rows.filter((r) => r.hasFallback).length;
 
   return (
     <section aria-label="Campaign health">
-      <ul className="flex flex-wrap gap-2">
+      {!expanded && (
+        <button
+          type="button"
+          onClick={() => setExpanded(true)}
+          aria-expanded={false}
+          aria-controls="campaign-health-chips"
+          className={cn(
+            "flex min-h-10 items-center gap-1.5 rounded-full border bg-white px-3 text-left text-xs text-slate-700 shadow-xs md:hidden",
+            onFallback > 0 ? "border-sev2/50" : "border-slate-200",
+          )}
+        >
+          {onFallback > 0 || rulesOff.length > 0 ? (
+            <CircleAlert className={cn("size-4 shrink-0", onFallback > 0 ? "text-sev2" : "text-slate-500")} aria-hidden />
+          ) : (
+            <CircleCheck className="size-4 shrink-0 text-ok" aria-hidden />
+          )}
+          <span className="font-medium">{healthStripSummary(rows.length, onFallback, rulesOff.length)}</span>
+          <span aria-hidden>▸</span>
+        </button>
+      )}
+      <ul id="campaign-health-chips" className={cn("flex-wrap gap-2", expanded ? "flex" : "hidden md:flex")}>
         {rows.map(({ campaign, eligibility, hasFallback }) => {
           const state = campaignState[campaign.id] ?? "active";
           const allClear = !hasFallback && rulesOff.length === 0;

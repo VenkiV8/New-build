@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { DEMO_NOW_TS, demoNow, generateSeededDemo, istParts } from "@/lib/dataGenerator";
 import { detectAll } from "@/lib/detector";
 import type { Alert } from "@/lib/types";
-import { ALERT_BUDGET, healthSummary, mostRecentOpen, sortForInbox, splitByAlertBudget, startedAgo, timeAgo } from "./inboxView";
+import { ALERT_BUDGET, healthStripSummary, healthSummary, mostRecentOpen, sortForInbox, splitByAlertBudget, startedAgo, timeAgo } from "./inboxView";
 
 const HOUR = 3_600_000;
 const fake = (id: string, inr: number, startedAt = 0): Alert =>
@@ -86,5 +86,13 @@ describe("healthSummary", () => {
     expect(healthSummary("All rules active", false, 1)).toBe("1 rule off");
     expect(healthSummary("All rules active", false, 2)).toBe("2 rules off");
     expect(healthSummary("1 rule family on fallback", true, 1)).toBe("1 rule family on fallback · 1 rule off");
+  });
+});
+
+describe("healthStripSummary", () => {
+  it("collapses the chips into one line", () => {
+    expect(healthStripSummary(4, 1, 0)).toBe("4 campaigns · 1 on fallback");
+    expect(healthStripSummary(4, 0, 0)).toBe("4 campaigns · all rules active");
+    expect(healthStripSummary(4, 1, 2)).toBe("4 campaigns · 1 on fallback · 2 rules off");
   });
 });

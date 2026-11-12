@@ -50,6 +50,15 @@ export function healthSummary(eligibilitySummary: string, hasFallback: boolean, 
   return hasFallback ? `${eligibilitySummary} · ${off}` : off;
 }
 
+/** Collapsed (mobile) health-strip label, e.g. "4 campaigns · 1 on fallback". */
+export function healthStripSummary(campaigns: number, onFallback: number, rulesOff: number): string {
+  const parts = [`${campaigns} campaigns`];
+  if (onFallback > 0) parts.push(`${onFallback} on fallback`);
+  if (rulesOff > 0) parts.push(`${rulesOff} rule${rulesOff === 1 ? "" : "s"} off`);
+  if (parts.length === 1) parts.push("all rules active");
+  return parts.join(" · ");
+}
+
 /**
  * "started Xh ago" for an alert: measured from the END of the last data hour
  * (demoNow() is the start of the 8 PM hour, so the end is demoNow() + 1h).

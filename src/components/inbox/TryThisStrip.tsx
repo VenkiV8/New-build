@@ -1,6 +1,7 @@
 import { useState, type ReactNode } from "react";
 import { Link } from "react-router-dom";
 import { X } from "lucide-react";
+import { cn } from "cn";
 
 // In-memory only (SPEC: no persistence beyond alert statuses). Survives route
 // changes within the session, resets on a full page reload.
@@ -26,6 +27,8 @@ interface Props {
 
 export function TryThisStrip({ onInjectTrackingBreak, incidentId }: Props) {
   const [dismissed, setDismissed] = useState(dismissedThisSession);
+  // Mobile only: starts as a one-line banner; desktop always shows the full strip.
+  const [expanded, setExpanded] = useState(false);
   if (dismissed) return null;
 
   const dismiss = () => {
@@ -35,9 +38,26 @@ export function TryThisStrip({ onInjectTrackingBreak, incidentId }: Props) {
   const href = incidentId ? `/incident/${encodeURIComponent(incidentId)}` : null;
 
   return (
+    <>
+    {!expanded && (
+      <button
+        type="button"
+        onClick={() => setExpanded(true)}
+        aria-expanded={false}
+        aria-controls="try-this-strip"
+        className="flex min-h-10 w-full items-center justify-between rounded-xl border border-slate-200 bg-white px-4 text-left text-sm font-medium text-brand md:hidden"
+      >
+        New here? Try the 60-second tour
+        <span aria-hidden>▸</span>
+      </button>
+    )}
     <section
+      id="try-this-strip"
       aria-label="Try this in 60 seconds"
-      className="relative rounded-xl border border-slate-200 bg-white px-4 py-3 pr-12 text-sm"
+      className={cn(
+        "relative rounded-xl border border-slate-200 bg-white px-4 py-3 pr-12 text-sm",
+        !expanded && "hidden md:block",
+      )}
     >
       <p className="mb-2 font-semibold text-slate-900">Try this in 60 seconds</p>
       <ol className="grid gap-x-4 text-slate-600 md:grid-cols-4 md:gap-y-1.5">
@@ -79,5 +99,6 @@ export function TryThisStrip({ onInjectTrackingBreak, incidentId }: Props) {
         <X className="size-4" />
       </button>
     </section>
+    </>
   );
 }

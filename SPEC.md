@@ -54,7 +54,8 @@ with a diagnosis and a one-tap fix. Severity is measured in ₹ at risk, not met
 - Header block: eyebrow "BudgetPager · on-call for your ad budget"; H1 "Aura & Co. Skincare" with a
   small slate "(fictional brand · demo account)" under it; description "BudgetPager watches your
   campaigns around the clock and pages you only when money is at risk, with the likely cause and a
-  one-tap fix."
+  one-tap fix." Mobile only (<768px): a compact duplicate "Open alerts inbox →" button directly under
+  the description.
 - "Live campaigns" section built from app state (updates live on inject / action / reset):
   a table on desktop, one card per campaign on mobile (<768px). Fields: Campaign name · Objective ·
   Daily budget · Spent today (₹ and % of budget with a thin pacing bar; over 100% the bar is red with
@@ -75,7 +76,7 @@ with a diagnosis and a one-tap fix. Severity is measured in ₹ at risk, not met
 ### 1. Incident Inbox (route /inbox)
 - Header: advertiser name and three stats:
   "At risk now" = sum of inrAtRiskTotal for ACTIVE alerts (OPEN or ACKED: acknowledged is not
-  fixed), subtitle "across N open incidents";
+  fixed), subtitle "across N active incidents";
   "Protected this session" = starts at ₹0; when an action resolves an alert (Pause / Cap budget /
   Mark fixed etc., not Snooze, Mark expected or opening the tracking checklist) add
   min(alert.inrAtRiskPerHour × hoursLeftToday, campaign.dailyBudgetInr), where hoursLeftToday is derived
@@ -140,6 +141,9 @@ with a diagnosis and a one-tap fix. Severity is measured in ₹ at risk, not met
   Under the tree: diagnoseTree(nodes) sentence in bold. Then, smaller, the existing alert.causes list
   titled "Likely segments (illustrative)".
 - alertWindowHours = hours between alert.startedAt and the last data point (+1), min 1.
+- Unknown incident id (e.g. a deep link to an incident not in the current session): same layout and
+  "← Inbox" link, text "This demo incident isn't in your current session." /
+  "Re-create it from the inbox demo controls."
 - Action row: primary one-tap action per class (Pause campaign / Cap budget / Open tracking checklist /
   Snooze 24h / Mark expected — "it's Diwali"). Actions update alert status in client state and toast.
   "Mark expected" toast: "Marked expected. In production this date joins the campaign's event calendar
@@ -225,10 +229,31 @@ Global guardrail: alert budget = max 5 alerts/day per advertiser; lowest-₹ ale
 - Every page: footer "Prototype · synthetic data, generated in-browser · no backend"; a simple skeleton
   while a page loads; favicon, <title> "BudgetPager — on-call for your ad budget", meta description.
 
+## Demo session persistence
+- The demo session is saved in localStorage under the key "budgetpager:demo:v1":
+  { v: 1, injections: [{campaignId, failureClass, hours}] in the order applied,
+  statuses: Record<alertId, status>, campaignState: Record<campaignId, state>,
+  rulesEnabled: Record<failureClass, boolean>, protectedInr: number }.
+  Only inputs and user decisions are stored, never derived data (history, alerts, ₹ figures).
+- Written after every state change (inject, action, ack, rule toggle). A session identical to a fresh
+  one is not stored (the key is removed instead), so a first visit writes nothing.
+- On load: if the key exists and v === 1, rebuild history as generateSeededDemo() and apply the saved
+  injections in order with injectIncident (deterministic, so the same alert ids come back), re-run
+  detectAll with the saved rule set, then restore statuses, campaignState and protectedInr. Status
+  entries whose alert id no longer exists are dropped.
+- Validation is strict: a parse error, wrong version, unknown field, unknown campaign / class / status,
+  or any throw → ignore the saved state, start fresh, and remove the key.
+- Every localStorage read/write is wrapped in try/catch, so Safari private mode or blocked storage
+  never breaks the app (it simply runs in memory).
+- "Reset demo" clears the key and returns to the seeded state. Seeded first load is unchanged
+  (₹1,508 at risk, 3 incidents).
+- Logic lives in src/state/persistence.ts (pure, unit-tested: round trip, corrupt/invalid payloads,
+  blocked storage, reset).
+
 ## Out of scope (do NOT build)
 Auth, settings, real integrations, real WhatsApp/email sending, LLM calls, dark mode,
-multi-advertiser switching, persistence beyond in-memory state (localStorage optional for
-alert statuses only, wrapped in try/catch).
+multi-advertiser switching, any persistence other than the demo session described above
+(no server, no sync across devices).
 
 ## Definition of done
 - `npm run build` passes with no TS errors; unit tests for detector pass (vitest).

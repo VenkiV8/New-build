@@ -2,6 +2,7 @@
 import { DEFAULT_RULES } from "@/lib/detector";
 import type { Alert, AlertStatus, Severity } from "@/lib/types";
 import { splitByAlertBudget } from "./inboxView";
+import { isActive } from "./protection";
 
 const HOUR = 3_600_000;
 
@@ -56,6 +57,7 @@ export function buildDigest(alerts: Alert[], statuses: Record<string, AlertStatu
   return {
     rows,
     totalAtRiskInr: alerts.reduce((s, a) => s + a.inrAtRiskTotal, 0),
-    openCount: rows.filter((r) => r.status === "OPEN").length,
+    // active = OPEN or ACKED (acknowledged is not fixed)
+    openCount: rows.filter((r) => isActive(r.status)).length,
   };
 }

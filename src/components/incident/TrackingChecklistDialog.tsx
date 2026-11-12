@@ -23,7 +23,7 @@ interface Props {
   /** resolves the alert (credits "Protected this session") */
   onMarkFixed: () => void;
   campaign: string;
-  /** ₹/day that "Mark fixed" will credit */
+  /** ₹ that "Mark fixed" will credit (rest of today, capped at the daily budget) */
   creditInr: number;
 }
 
@@ -70,7 +70,7 @@ export function TrackingChecklistDialog({ open, onOpenChange, onMarkFixed, campa
             }}
           >
             Mark fixed
-            {allDone && <span className="opacity-80">· up to {formatInr(creditInr)}/day</span>}
+            {allDone && <span className="opacity-80">· ≈ {formatInr(creditInr)} rest of today</span>}
           </Button>
         </DialogFooter>
       </DialogContent>

@@ -68,14 +68,14 @@ describe("planInjection on the seeded demo", () => {
     expect(c1?.headline).toContain("406%");
   });
 
-  it("on clean data, spend runaway goes c1 → c3 → c2, then reports all open", () => {
+  it("on clean data, spend runaway goes c1 → c3 → c2, then reports blocked", () => {
     let history: CampaignHistory = generateHistory(42);
     let alerts = detectAll(history, { rules: DEFAULT_RULES });
     const hit: string[] = [];
     for (let i = 0; i < 4; i++) {
       const plan = planInjection("SPEND_RUNAWAY", history, alerts, DEFAULT_RULES);
       if (plan.kind !== "ok") {
-        expect(plan.kind).toBe("allOpen");
+        expect(plan.kind).toBe("blocked");
         break;
       }
       expect(newAlerts(alerts, plan.alerts).length).toBeGreaterThan(0);
@@ -91,5 +91,44 @@ describe("planInjection on the seeded demo", () => {
     if (first.kind !== "ok") throw new Error("expected ok");
     const second = planInjection("SPEND_RUNAWAY", first.history, first.alerts, DEFAULT_RULES);
     expect(second.kind).toBe("noSignal");
+  });
+});
+
+describe("campaign state and closed incidents", () => {
+  const seeded = () => {
+    const history = generateSeededDemo();
+    return { history, alerts: detectAll(history, { rules: DEFAULT_RULES }) };
+  };
+
+  it("skips paused campaigns and reports blocked when every target is paused or active", () => {
+    const { history, alerts } = seeded();
+    // tracking break: c2 has an active one, c1 paused → nothing eligible
+    const plan = planInjection("TRACKING_BREAK", history, alerts, DEFAULT_RULES, {}, { c1: "paused" });
+    expect(plan.kind).toBe("blocked");
+    // delivery failure on c4: paused → blocked
+    expect(planInjection("DELIVERY_FAILURE", history, alerts, DEFAULT_RULES, {}, { c4: "paused" }).kind).toBe("blocked");
+    // capped does not block
+    expect(planInjection("DELIVERY_FAILURE", history, alerts, DEFAULT_RULES, {}, { c4: "capped" }).kind).toBe("ok");
+  });
+
+  it("a RESOLVED incident does not block: re-injecting on that campaign reopens it", () => {
+    const { history, alerts } = seeded();
+    const c1sr = alerts.find((a) => a.campaignId === "c1" && a.failureClass === "SPEND_RUNAWAY")!;
+    // active (OPEN) → c1 skipped, goes to c2
+    const whileOpen = planInjection("SPEND_RUNAWAY", history, alerts, DEFAULT_RULES, {});
+    expect(whileOpen.kind === "ok" && whileOpen.injection.campaignId).toBe("c2");
+    // ACKED still blocks c1
+    const whileAcked = planInjection("SPEND_RUNAWAY", history, alerts, DEFAULT_RULES, { [c1sr.id]: "ACKED" });
+    expect(whileAcked.kind === "ok" && whileAcked.injection.campaignId).toBe("c2");
+    // RESOLVED → c1 eligible again; same incident re-fires and is flagged for reopening
+    const afterFix = planInjection("SPEND_RUNAWAY", history, alerts, DEFAULT_RULES, { [c1sr.id]: "RESOLVED" });
+    expect(afterFix.kind).toBe("ok");
+    if (afterFix.kind !== "ok") return;
+    expect(afterFix.injection.campaignId).toBe("c1");
+    expect(afterFix.added.failureClass).toBe("SPEND_RUNAWAY");
+    expect(afterFix.recurred).toBe(true);
+    // ...but not if c1 was paused by the fix
+    const paused = planInjection("SPEND_RUNAWAY", history, alerts, DEFAULT_RULES, { [c1sr.id]: "RESOLVED" }, { c1: "paused" });
+    expect(paused.kind === "ok" && paused.injection.campaignId).toBe("c2");
   });
 });

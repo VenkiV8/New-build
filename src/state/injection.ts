@@ -1,7 +1,8 @@
 // Pure helpers for the demo "Inject" controls. No React here.
 import { injectIncident } from "@/lib/dataGenerator";
 import { detectAll } from "@/lib/detector";
-import type { Alert, CampaignHistory, IncidentInjection, RuleConfig } from "@/lib/types";
+import type { Alert, AlertStatus, CampaignHistory, IncidentInjection, RuleConfig } from "@/lib/types";
+import { isActive, type CampaignState } from "./protection";
 
 export type InjectableClass = "TRACKING_BREAK" | "SPEND_RUNAWAY" | "DELIVERY_FAILURE";
 
@@ -19,16 +20,32 @@ export const INJECTION_TARGETS: Record<InjectableClass, string[]> = {
   DELIVERY_FAILURE: ["c4"],
 };
 
-/** Targets (in preference order) that do not already have an incident of this class. */
-export function freeTargets(failureClass: InjectableClass, alerts: Alert[]): string[] {
+/**
+ * Targets (in preference order) that can take this injection: not paused, and
+ * without an ACTIVE (OPEN/ACKED) incident of this class. A RESOLVED, EXPECTED or
+ * SNOOZED incident does not block re-injection.
+ */
+export function freeTargets(
+  failureClass: InjectableClass,
+  alerts: Alert[],
+  statuses: Record<string, AlertStatus> = {},
+  campaignState: Record<string, CampaignState> = {},
+): string[] {
   return INJECTION_TARGETS[failureClass].filter(
-    (cid) => !alerts.some((a) => a.campaignId === cid && a.failureClass === failureClass),
+    (cid) =>
+      campaignState[cid] !== "paused" &&
+      !alerts.some((a) => a.campaignId === cid && a.failureClass === failureClass && isActive(statuses[a.id])),
   );
 }
 
-/** First free target as an injection, or null when every target already has one. */
-export function pickInjection(failureClass: InjectableClass, alerts: Alert[]): IncidentInjection | null {
-  const [campaignId] = freeTargets(failureClass, alerts);
+/** First free target as an injection, or null when none is eligible. */
+export function pickInjection(
+  failureClass: InjectableClass,
+  alerts: Alert[],
+  statuses: Record<string, AlertStatus> = {},
+  campaignState: Record<string, CampaignState> = {},
+): IncidentInjection | null {
+  const [campaignId] = freeTargets(failureClass, alerts, statuses, campaignState);
   return campaignId ? { campaignId, failureClass, hours: INJECTION_HOURS[failureClass] } : null;
 }
 
@@ -39,15 +56,25 @@ export function newAlerts(before: Alert[], after: Alert[]): Alert[] {
 }
 
 export type InjectionPlan =
-  | { kind: "ok"; injection: IncidentInjection; history: CampaignHistory; alerts: Alert[]; added: Alert }
-  /** every target already has an incident of this class */
-  | { kind: "allOpen"; targets: string[] }
+  | {
+      kind: "ok";
+      injection: IncidentInjection;
+      history: CampaignHistory;
+      alerts: Alert[];
+      added: Alert;
+      /** true when the incident re-fired on a campaign whose earlier one was closed: reopen it */
+      recurred: boolean;
+    }
+  /** every target is paused or already has an active incident of this class */
+  | { kind: "blocked"; targets: string[] }
   /** free targets exist, but injecting would not trip the detector on any of them right now */
   | { kind: "noSignal"; targets: string[] };
 
 /**
- * Decide an injection WITHOUT touching live data: try each free target in order
- * on a copy and take the first one that produces a new alert of this class.
+ * Decide an injection WITHOUT touching live data: try each eligible target in
+ * order on a copy and take the first one where the detector fires for this class.
+ * That is either a new alert, or (after a fix) the same incident firing again on
+ * a campaign whose earlier alert was closed, which the caller reopens.
  * (E.g. a seeded CTR drift on c3 halves its spend, so a spend surge there stays
  * under the threshold; the plan then moves on to c2.)
  */
@@ -56,17 +83,29 @@ export function planInjection(
   history: CampaignHistory,
   alerts: Alert[],
   rules: RuleConfig[],
+  statuses: Record<string, AlertStatus> = {},
+  campaignState: Record<string, CampaignState> = {},
 ): InjectionPlan {
-  const targets = freeTargets(failureClass, alerts);
-  if (targets.length === 0) return { kind: "allOpen", targets: INJECTION_TARGETS[failureClass] };
+  const targets = freeTargets(failureClass, alerts, statuses, campaignState);
+  if (targets.length === 0) return { kind: "blocked", targets: INJECTION_TARGETS[failureClass] };
+  const before = new Set(alerts.map((a) => a.id));
   for (const campaignId of targets) {
     const injection = { campaignId, failureClass, hours: INJECTION_HOURS[failureClass] };
     const nextHistory = injectIncident(history, injection);
     const nextAlerts = detectAll(nextHistory, { rules });
-    const added = newAlerts(alerts, nextAlerts).find(
-      (a) => a.failureClass === failureClass && a.campaignId === campaignId,
-    );
-    if (added) return { kind: "ok", injection, history: nextHistory, alerts: nextAlerts, added };
+    const fired = nextAlerts.find((a) => a.failureClass === failureClass && a.campaignId === campaignId);
+    // fired + not active before = a real (new or recurring) incident; the target filter
+    // already excluded campaigns with an active alert of this class.
+    if (fired) {
+      return {
+        kind: "ok",
+        injection,
+        history: nextHistory,
+        alerts: nextAlerts,
+        added: fired,
+        recurred: before.has(fired.id),
+      };
+    }
   }
   return { kind: "noSignal", targets };
 }

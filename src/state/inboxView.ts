@@ -40,6 +40,17 @@ export function mostRecentOpen(
 }
 
 /**
+ * Health-chip summary that reflects live rule toggles:
+ * no rules off → the eligibility summary; rules off → "1 rule off" (appended
+ * after the fallback summary when the campaign also has fallback gates).
+ */
+export function healthSummary(eligibilitySummary: string, hasFallback: boolean, rulesOff: number): string {
+  if (rulesOff === 0) return eligibilitySummary;
+  const off = `${rulesOff} rule${rulesOff === 1 ? "" : "s"} off`;
+  return hasFallback ? `${eligibilitySummary} · ${off}` : off;
+}
+
+/**
  * "started Xh ago" for an alert: measured from the END of the last data hour
  * (demoNow() is the start of the 8 PM hour, so the end is demoNow() + 1h).
  * This matches the headline durations, e.g. "0 for 4h" → "started 4h ago".

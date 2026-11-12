@@ -13,7 +13,7 @@ import { mostRecentOpen, sortForInbox, splitByAlertBudget, startedAgo } from "@/
 import { atRiskNow } from "@/state/protection";
 
 export default function InboxPage() {
-  const { history, alerts, statuses, protectedInr, inject, lastInjectedId, resetDemo } = useApp();
+  const { history, rules, alerts, statuses, protectedInr, campaignState, inject, lastInjectedId, resetDemo } = useApp();
   const tryTarget = useMemo(
     () => mostRecentOpen(alerts, statuses, lastInjectedId),
     [alerts, statuses, lastInjectedId],
@@ -44,14 +44,14 @@ export default function InboxPage() {
       <InboxHeader
         advertiser={ADVERTISER}
         atRiskInr={risk.totalInr}
-        openCount={risk.openCount}
+        openCount={risk.activeCount}
         protectedInr={protectedInr}
         alertsUsed={paged.length}
       />
 
       <TryThisStrip onInjectTrackingBreak={() => inject("TRACKING_BREAK")} incidentId={tryTarget?.id ?? null} />
 
-      <CampaignHealthStrip history={history} />
+      <CampaignHealthStrip history={history} rules={rules} campaignState={campaignState} />
 
       {alerts.length === 0 ? (
         <section className="flex flex-col items-center gap-2 rounded-xl border border-slate-200 bg-white px-6 py-12 text-center">

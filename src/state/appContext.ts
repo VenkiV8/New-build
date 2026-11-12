@@ -1,14 +1,17 @@
 import { createContext, useContext } from "react";
 import type { Alert, AlertStatus, CampaignHistory, FailureClass, RuleConfig } from "@/lib/types";
 import type { InjectableClass } from "./injection";
+import type { CampaignState } from "./protection";
 
 export interface AppState {
   history: CampaignHistory;
   alerts: Alert[];
   /** alertId → status; alerts missing from the map are OPEN */
   statuses: Record<string, AlertStatus>;
-  /** ₹/day exposure stopped by fixes this session (resets with the demo) */
+  /** ₹ exposure stopped for the rest of today by fixes this session (resets with the demo) */
   protectedInr: number;
+  /** per campaign: active / paused (Pause campaign) / capped (Cap today's budget); reset restores active */
+  campaignState: Record<string, CampaignState>;
   /** apply a suggested action: sets the alert's status; fixes add to protectedInr */
   applyAction: (alertId: string, action: string) => void;
   inject: (failureClass: InjectableClass) => void;

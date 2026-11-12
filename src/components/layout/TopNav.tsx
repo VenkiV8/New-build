@@ -18,7 +18,8 @@ export function TopNav() {
   const { alerts, statuses } = useApp();
   // Fixed demo clock, always shown in IST ("8:00 PM IST").
   const asOf = `${formatClockTime(demoNow())} IST`;
-  const openCount = atRiskNow(alerts, statuses).openCount;
+  // Bell counts OPEN (unacknowledged) alerts only.
+  const openCount = atRiskNow(alerts, statuses).unackedCount;
 
   return (
     <header className="sticky top-0 z-20 border-b border-topbar bg-topbar text-white">

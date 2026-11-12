@@ -57,7 +57,7 @@ export function InboxHeader({ advertiser, atRiskInr, openCount, protectedInr, al
           iconClass="text-ok"
           label="Protected this session"
           value={formatInr(protectedInr)}
-          sub="/day exposure stopped"
+          sub="exposure stopped for the rest of today"
         />
         <Stat
           icon={Gauge}

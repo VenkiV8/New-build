@@ -26,9 +26,12 @@ const CONTROLS = [
 export function NoiseControls() {
   return (
     <section aria-label="Noise controls" className="rounded-xl border border-slate-200 bg-white p-4">
-      <h2 className="mb-3 flex items-center gap-1.5 text-base font-semibold text-slate-900">
+      <h2 className="mb-3 flex flex-wrap items-center gap-1.5 text-base font-semibold text-slate-900">
         <Funnel className="size-4 text-slate-400" aria-hidden />
         Noise controls
+        <span className="ml-1 rounded-full bg-slate-100 px-2 py-0.5 text-xs font-medium text-slate-600 ring-1 ring-slate-300 ring-inset">
+          Policy · not simulated in this prototype
+        </span>
       </h2>
       <ul className="grid gap-4 sm:grid-cols-2">
         {CONTROLS.map(({ icon: Icon, title, body }) => (

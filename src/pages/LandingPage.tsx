@@ -39,8 +39,8 @@ export default function LandingPage() {
       <ul aria-label="Account status" className="flex flex-wrap gap-2">
         <StatChip icon={<Inbox className="size-4 text-slate-500" aria-hidden />}>
           <span>
-            <span className="font-semibold text-slate-900">{risk.openCount}</span> open incident
-            {risk.openCount === 1 ? "" : "s"}
+            <span className="font-semibold text-slate-900">{risk.activeCount}</span> open incident
+            {risk.activeCount === 1 ? "" : "s"}
           </span>
         </StatChip>
         <StatChip icon={<TriangleAlert className="size-4 text-sev1" aria-hidden />}>

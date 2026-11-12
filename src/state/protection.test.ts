@@ -2,7 +2,16 @@ import { describe, expect, it } from "vitest";
 import { generateSeededDemo } from "@/lib/dataGenerator";
 import { detectAll } from "@/lib/detector";
 import type { Alert } from "@/lib/types";
-import { actionsFor, atRiskNow, exposureStopped, statusForAction } from "./protection";
+import {
+  actionsFor,
+  allCampaignsActive,
+  atRiskNow,
+  campaignStateForAction,
+  exposureStopped,
+  hoursLeftToday,
+  isActive,
+  statusForAction,
+} from "./protection";
 
 const fake = (id: string, total: number, perHour = 0): Alert =>
   ({ id, inrAtRiskTotal: total, inrAtRiskPerHour: perHour }) as Alert;
@@ -46,25 +55,52 @@ describe("actionsFor", () => {
   });
 });
 
-describe("exposureStopped", () => {
-  it("caps the seeded c1 spend runaway at its ₹3,000 daily budget (not ₹10,032)", () => {
-    const sr = detectAll(generateSeededDemo()).find(
-      (a) => a.campaignId === "c1" && a.failureClass === "SPEND_RUNAWAY",
-    )!;
-    expect(sr.inrAtRiskPerHour * 24).toBe(10_032);
-    expect(exposureStopped(sr)).toBe(3_000);
-  });
-
-  it("is ₹/h at risk × 24 when that is under the daily budget, else the budget", () => {
-    expect(exposureStopped({ ...fake("a", 0, 50), campaignId: "c2" })).toBe(1_200); // < ₹1,600
-    expect(exposureStopped({ ...fake("a", 0, 86), campaignId: "c2" })).toBe(1_600); // ₹2,064 capped
+describe("hoursLeftToday", () => {
+  it("is 3: data runs to the end of the 8–9 PM IST hour (24 − 21), derived from demoNow()", () => {
+    expect(hoursLeftToday()).toBe(3);
   });
 });
 
-describe("atRiskNow", () => {
-  it("sums only OPEN alerts; missing status counts as OPEN", () => {
-    const alerts = [fake("a", 800), fake("b", 300), fake("c", 100)];
-    expect(atRiskNow(alerts, { b: "RESOLVED" })).toEqual({ totalInr: 900, openCount: 2 });
-    expect(atRiskNow(alerts, {})).toEqual({ totalInr: 1200, openCount: 3 });
+describe("exposureStopped", () => {
+  it("pausing the c1 spend runaway credits ₹1,254 (418 × 3h), not ₹3,000", () => {
+    const sr = detectAll(generateSeededDemo()).find(
+      (a) => a.campaignId === "c1" && a.failureClass === "SPEND_RUNAWAY",
+    )!;
+    expect(sr.inrAtRiskPerHour).toBe(418);
+    expect(exposureStopped(sr)).toBe(1_254);
+  });
+
+  it("is ₹/h × hours left today, capped at the campaign's daily budget", () => {
+    expect(exposureStopped({ ...fake("a", 0, 86), campaignId: "c2" })).toBe(258); // 86 × 3
+    expect(exposureStopped({ ...fake("a", 0, 1_000), campaignId: "c4" })).toBe(400); // ₹3,000 capped at ₹400
+  });
+});
+
+describe("isActive / atRiskNow", () => {
+  it("Acknowledged is not fixed: OPEN and ACKED are active, the rest closed", () => {
+    expect(isActive(undefined)).toBe(true);
+    expect(isActive("OPEN")).toBe(true);
+    expect(isActive("ACKED")).toBe(true);
+    for (const s of ["RESOLVED", "EXPECTED", "SNOOZED"] as const) expect(isActive(s)).toBe(false);
+  });
+
+  it("At risk now counts OPEN + ACKED; the bell (unacked) counts OPEN only", () => {
+    const alerts = [fake("a", 800), fake("b", 300), fake("c", 100), fake("d", 50)];
+    expect(atRiskNow(alerts, { b: "ACKED", c: "RESOLVED", d: "SNOOZED" })).toEqual({
+      totalInr: 1_100,
+      activeCount: 2,
+      unackedCount: 1,
+    });
+    expect(atRiskNow(alerts, {})).toEqual({ totalInr: 1_250, activeCount: 4, unackedCount: 4 });
+  });
+});
+
+describe("campaignStateForAction", () => {
+  it("Pause campaign → paused, Cap today's budget → capped, others → no change", () => {
+    expect(campaignStateForAction("Pause campaign")).toBe("paused");
+    expect(campaignStateForAction("Cap today's budget")).toBe("capped");
+    expect(campaignStateForAction("Snooze 24h")).toBeNull();
+    expect(campaignStateForAction("Mark fixed")).toBeNull();
+    expect(Object.values(allCampaignsActive())).toEqual(["active", "active", "active", "active"]);
   });
 });

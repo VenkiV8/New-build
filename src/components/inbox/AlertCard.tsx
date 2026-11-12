@@ -13,6 +13,7 @@ import {
 } from "@/components/alerts/alertMeta";
 import { FailureClassIcon } from "@/components/alerts/FailureClassIcon";
 import { SeverityChip } from "@/components/alerts/SeverityChip";
+import { isActive } from "@/state/protection";
 import { formatInr } from "@/utils/format";
 
 interface Props {
@@ -27,7 +28,8 @@ interface Props {
 
 export function AlertCard({ alert, status, startedAgo, fresh, muted }: Props) {
   const campaign = CAMPAIGNS.find((c) => c.id === alert.campaignId)?.name ?? alert.campaignId;
-  const closed = status !== "OPEN";
+  // Acknowledged is not fixed: only Resolved / Expected / Snoozed render as closed (greyed).
+  const closed = !isActive(status);
 
   return (
     <Link

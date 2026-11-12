@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { DEMO_NOW_TS, demoNow, generateSeededDemo, istParts } from "@/lib/dataGenerator";
 import { detectAll } from "@/lib/detector";
 import type { Alert } from "@/lib/types";
-import { ALERT_BUDGET, mostRecentOpen, sortForInbox, splitByAlertBudget, startedAgo, timeAgo } from "./inboxView";
+import { ALERT_BUDGET, healthSummary, mostRecentOpen, sortForInbox, splitByAlertBudget, startedAgo, timeAgo } from "./inboxView";
 
 const HOUR = 3_600_000;
 const fake = (id: string, inr: number, startedAt = 0): Alert =>
@@ -77,5 +77,14 @@ describe("timeAgo", () => {
     expect(timeAgo(0, 30 * 60_000)).toBe("just now");
     expect(timeAgo(0, 3 * HOUR)).toBe("3h ago");
     expect(timeAgo(0, 50 * HOUR)).toBe("2d ago");
+  });
+});
+
+describe("healthSummary", () => {
+  it("reflects live rule toggles", () => {
+    expect(healthSummary("All rules active", false, 0)).toBe("All rules active");
+    expect(healthSummary("All rules active", false, 1)).toBe("1 rule off");
+    expect(healthSummary("All rules active", false, 2)).toBe("2 rules off");
+    expect(healthSummary("1 rule family on fallback", true, 1)).toBe("1 rule family on fallback · 1 rule off");
   });
 });

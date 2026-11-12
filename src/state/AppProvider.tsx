@@ -3,10 +3,17 @@ import { toast } from "sonner";
 import { CAMPAIGNS, generateSeededDemo } from "@/lib/dataGenerator";
 import { DEFAULT_RULES, detectAll } from "@/lib/detector";
 import type { Alert, AlertStatus, CampaignHistory, FailureClass, RuleConfig } from "@/lib/types";
-import { formatDate, formatInr } from "@/utils/format";
+import { formatInr } from "@/utils/format";
 import { AppContext, type AppState } from "./appContext";
 import { planInjection, type InjectableClass } from "./injection";
-import { exposureStopped, statusForAction } from "./protection";
+import {
+  allCampaignsActive,
+  campaignStateForAction,
+  exposureStopped,
+  hoursLeftToday,
+  statusForAction,
+  type CampaignState,
+} from "./protection";
 
 interface Data {
   history: CampaignHistory;
@@ -27,6 +34,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const [statuses, setStatuses] = useState<Record<string, AlertStatus>>({});
   const [protectedInr, setProtectedInr] = useState(0);
   const [lastInjectedId, setLastInjectedId] = useState<string | null>(null);
+  const [campaignState, setCampaignState] = useState<Record<string, CampaignState>>(allCampaignsActive);
 
   const applyAction = useCallback(
     (alertId: string, action: string) => {
@@ -35,10 +43,13 @@ export function AppProvider({ children }: { children: ReactNode }) {
       const next = statusForAction(action);
       const wasResolved = statuses[alertId] === "RESOLVED";
       setStatuses((s) => ({ ...s, [alertId]: next }));
+      // Pause campaign → paused, Cap today's budget → capped (shown on the inbox health chip)
+      const effect = campaignStateForAction(action);
+      if (effect) setCampaignState((c) => ({ ...c, [alert.campaignId]: effect }));
       if (next === "RESOLVED" && !wasResolved) {
         const stopped = exposureStopped(alert);
         setProtectedInr((p) => p + stopped);
-        toast.success(`Up to ${formatInr(stopped)}/day exposure stopped`, {
+        toast.success(`≈ ${formatInr(stopped)} of exposure stopped for the rest of today (${hoursLeftToday()} h)`, {
           description: `${action}: ${campaignName(alert.campaignId)}`,
         });
       } else if (next === "SNOOZED") {
@@ -46,8 +57,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
           description: "You'll be paged again only if severity escalates.",
         });
       } else if (next === "EXPECTED") {
-        toast(`Marked expected: ${campaignName(alert.campaignId)}`, {
-          description: `${formatDate(alert.startedAt)} added to this campaign's expected-events calendar, so the baseline learns.`,
+        toast("Marked expected.", {
+          description: "In production this date joins the campaign's event calendar so the baseline learns.",
         });
       }
     },
@@ -63,10 +74,10 @@ export function AppProvider({ children }: { children: ReactNode }) {
         return;
       }
       // Plan on a copy first: live data changes only if a new alert is confirmed.
-      const plan = planInjection(failureClass, data.history, data.alerts, data.rules);
-      if (plan.kind === "allOpen") {
-        toast(`${classLabel(failureClass)} already open on ${plan.targets.map(campaignName).join(", ")}`, {
-          description: "Reset the demo to inject it again.",
+      const plan = planInjection(failureClass, data.history, data.alerts, data.rules, statuses, campaignState);
+      if (plan.kind === "blocked") {
+        toast("All eligible campaigns are paused or already have this incident", {
+          description: `${classLabel(failureClass)} targets: ${plan.targets.map(campaignName).join(", ")}. Reset the demo to start over.`,
         });
         return;
       }
@@ -78,12 +89,20 @@ export function AppProvider({ children }: { children: ReactNode }) {
       }
       const { added } = plan;
       setData({ ...data, history: plan.history, alerts: plan.alerts });
+      // Same incident firing again after it was closed: reopen it.
+      if (plan.recurred) {
+        setStatuses((s) => {
+          const next = { ...s };
+          delete next[added.id];
+          return next;
+        });
+      }
       setLastInjectedId(added.id);
       toast.error(`${added.severity} · ${classLabel(added.failureClass)}: ${campaignName(added.campaignId)}`, {
         description: `${formatInr(added.inrAtRiskPerHour)}/h at risk. ${added.headline}`,
       });
     },
-    [data],
+    [data, statuses, campaignState],
   );
 
   const setRuleEnabled = useCallback((failureClass: FailureClass, enabled: boolean) => {
@@ -101,7 +120,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
     setStatuses({});
     setProtectedInr(0);
     setLastInjectedId(null);
-    toast.success("Demo reset", { description: "Back to the 3 seeded incidents, all rules on." });
+    setCampaignState(allCampaignsActive());
+    toast.success("Demo reset", { description: "Back to the 3 seeded incidents, all rules on, all campaigns active." });
   }, []);
 
   const value = useMemo<AppState>(
@@ -111,13 +131,14 @@ export function AppProvider({ children }: { children: ReactNode }) {
       alerts: data.alerts,
       statuses,
       protectedInr,
+      campaignState,
       applyAction,
       inject,
       lastInjectedId,
       setRuleEnabled,
       resetDemo,
     }),
-    [data, statuses, protectedInr, applyAction, inject, lastInjectedId, setRuleEnabled, resetDemo],
+    [data, statuses, protectedInr, campaignState, applyAction, inject, lastInjectedId, setRuleEnabled, resetDemo],
   );
 
   return <AppContext.Provider value={value}>{children}</AppContext.Provider>;

@@ -1,5 +1,6 @@
 import { Link } from "react-router-dom";
 import { cn } from "cn";
+import logo from "@/assets/aura-logo.svg";
 import { ADVERTISER } from "@/state/account";
 import { formatInr } from "@/utils/format";
 import { useCountUp } from "./useCountUp";
@@ -33,13 +34,36 @@ export function LandingHero(p: Props) {
   const pct = Math.round((p.spentToday / p.totalBudget) * 100);
 
   return (
-    <section className="bp-hero overflow-hidden rounded-2xl px-5 py-6 text-white md:px-8 md:py-8">
-      <div className="max-w-2xl space-y-3">
+    <section className="bp-hero relative overflow-hidden rounded-2xl px-5 py-6 text-white md:px-8 md:py-8">
+      {/* Desktop (≥768px): logo pinned top-right; the text block below reserves md:pr-32 for it */}
+      <figure className="absolute top-8 right-8 hidden flex-col items-center md:flex">
+        <img
+          src={logo}
+          alt="Aura & Co. Skincare logo (fictional brand)"
+          width={72}
+          height={72}
+          className="size-[72px] rounded-[18px]"
+          style={{ boxShadow: "0 6px 20px rgba(0,0,0,.35)" }}
+        />
+        <figcaption className="mt-2 text-[13px] font-semibold tracking-[0.5px] text-white">AURA &amp; CO.</figcaption>
+      </figure>
+
+      <div className="max-w-2xl space-y-3 md:pr-32">
         <p className="text-xs font-medium tracking-wide text-slate-200 uppercase">
           BudgetPager · on-call for your ad budget
         </p>
         <div>
-          <h1 className="text-3xl font-semibold tracking-tight text-white md:text-4xl">{ADVERTISER}</h1>
+          <div className="flex items-center gap-3">
+            {/* Mobile (<768px): 48px logo left of the heading, no caption */}
+            <img
+              src={logo}
+              alt="Aura & Co. Skincare logo (fictional brand)"
+              width={48}
+              height={48}
+              className="size-12 shrink-0 rounded-xl md:hidden"
+            />
+            <h1 className="min-w-0 text-3xl font-semibold tracking-tight text-white md:text-4xl">{ADVERTISER}</h1>
+          </div>
           <p className="mt-1 text-sm text-slate-300">(fictional brand · demo account)</p>
         </div>
         <p className="text-base text-slate-100 md:text-lg">

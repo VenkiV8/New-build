@@ -1,0 +1,23 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64" role="img" aria-label="Aura &amp; Co. Skincare logo (fictional brand)">
+  <defs>
+    <linearGradient id="auraBg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#FAD7BF"/>
+      <stop offset="1" stop-color="#E9967A"/>
+    </linearGradient>
+    <radialGradient id="auraGlow" cx="0.5" cy="0.56" r="0.5">
+      <stop offset="0" stop-color="#FFFFFF" stop-opacity="0.55"/>
+      <stop offset="1" stop-color="#FFFFFF" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+  <!-- tile -->
+  <rect x="0" y="0" width="64" height="64" rx="16" fill="url(#auraBg)"/>
+  <!-- soft aura glow -->
+  <circle cx="32" cy="35" r="22" fill="url(#auraGlow)"/>
+  <!-- halo rings (the "aura") -->
+  <circle cx="32" cy="35" r="17" fill="none" stroke="#FFFFFF" stroke-opacity="0.55" stroke-width="1.5"/>
+  <circle cx="32" cy="35" r="21.5" fill="none" stroke="#FFFFFF" stroke-opacity="0.28" stroke-width="1.2"/>
+  <!-- droplet -->
+  <path d="M32 18 C 32 18, 22.5 29.5, 22.5 36.5 A 9.5 9.5 0 0 0 41.5 36.5 C 41.5 29.5, 32 18, 32 18 Z" fill="#FFFFFF"/>
+  <!-- highlight on droplet -->
+  <path d="M27.6 36.2 A 4.6 4.6 0 0 0 31.4 41.6" fill="none" stroke="#E9967A" stroke-width="1.8" stroke-linecap="round" stroke-opacity="0.7"/>
+</svg>

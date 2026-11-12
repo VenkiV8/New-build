@@ -1,5 +1,5 @@
 // Pure view helpers for the landing page's "Live campaigns" section. No React here.
-import { CAMPAIGNS, demoNow, sameIstDay } from "@/lib/dataGenerator";
+import { CAMPAIGNS, demoNow, istParts, sameIstDay } from "@/lib/dataGenerator";
 import type { Alert, AlertStatus, Campaign, CampaignHistory, Severity } from "@/lib/types";
 import { isActive, type CampaignState } from "./protection";
 
@@ -30,6 +30,36 @@ export interface CampaignRow {
   activeAlerts: Alert[];
   /** worst active alert: highest severity, then highest ₹ at risk */
   worst: Alert | null;
+}
+
+export interface SparkPoint {
+  ts: number;
+  /** IST hour of day, 0–23 (x position) */
+  hour: number;
+  spendInr: number;
+  /** inside an OPEN/ACKED alert window for this campaign */
+  inIncident: boolean;
+}
+
+/**
+ * "Today" sparkline: hourly spend for the IST calendar day of demoNow() (≤ 24
+ * points). Hours from an active alert's startedAt onward are flagged.
+ */
+export function todaySpendSeries(
+  history: CampaignHistory,
+  campaignId: string,
+  activeAlerts: Alert[],
+): SparkPoint[] {
+  const now = demoNow();
+  const starts = activeAlerts.filter((a) => a.campaignId === campaignId).map((a) => a.startedAt);
+  return (history[campaignId] ?? [])
+    .filter((p) => sameIstDay(p.ts, now))
+    .map((p) => ({
+      ts: p.ts,
+      hour: istParts(p.ts).hours,
+      spendInr: p.spendInr,
+      inIncident: starts.some((s) => p.ts >= s),
+    }));
 }
 
 /** One row per campaign, from live app state. */

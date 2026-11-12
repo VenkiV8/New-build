@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { generateSeededDemo } from "@/lib/dataGenerator";
 import { detectAll } from "@/lib/detector";
-import { campaignOverview } from "./landingView";
+import { campaignOverview, todaySpendSeries } from "./landingView";
 
 const seeded = () => {
   const history = generateSeededDemo();
@@ -38,5 +38,28 @@ describe("campaignOverview (seeded demo)", () => {
     const { history, alerts } = seeded();
     const rows = campaignOverview(history, alerts, {}, { c1: "paused", c3: "capped" });
     expect(rows.map((r) => r.state)).toEqual(["paused", "active", "capped", "active"]);
+  });
+});
+
+describe("todaySpendSeries (sparkline)", () => {
+  it("has ≤ 24 hourly points for the IST demo day, ending at 8 PM", () => {
+    const { history, alerts } = seeded();
+    const pts = todaySpendSeries(history, "c1", alerts);
+    expect(pts.length).toBeGreaterThan(0);
+    expect(pts.length).toBeLessThanOrEqual(24);
+    expect(pts[0].hour).toBe(0);
+    expect(pts[pts.length - 1].hour).toBe(20);
+  });
+
+  it("flags c1's last hours (the seeded 2h spend runaway) as incident hours", () => {
+    const { history, alerts } = seeded();
+    const pts = todaySpendSeries(history, "c1", alerts);
+    const flagged = pts.filter((p) => p.inIncident).map((p) => p.hour);
+    expect(flagged).toEqual([19, 20]);
+    expect(pts[pts.length - 1].inIncident).toBe(true);
+    // resolved alert → no longer active → nothing flagged
+    expect(todaySpendSeries(history, "c1", []).some((p) => p.inIncident)).toBe(false);
+    // healthy campaign: nothing flagged
+    expect(todaySpendSeries(history, "c4", alerts).some((p) => p.inIncident)).toBe(false);
   });
 });

@@ -49,28 +49,55 @@ with a diagnosis and a one-tap fix. Severity is measured in ₹ at risk, not met
 - Account details (advertiser, owner, total daily budget) come from one shared module (src/state/account.ts).
 
 ### 0. Landing (route /)
-- Same theme. No horizontal scroll at 375px; the primary button is visible within the first two
-  screen heights on mobile.
-- Header block: eyebrow "BudgetPager · on-call for your ad budget"; H1 "Aura & Co. Skincare" with a
-  small slate "(fictional brand · demo account)" under it; description "BudgetPager watches your
-  campaigns around the clock and pages you only when money is at risk, with the likely cause and a
-  one-tap fix." Mobile only (<768px): a compact duplicate "Open alerts inbox →" button directly under
-  the description.
+- No horizontal scroll at 375px; the primary button is visible within the first two screen heights on
+  mobile. The landing page has its own look (below); every other page keeps the ops-console theme.
+  Landing-only styles live in src/components/landing/landing.css.
+- Hero band (top): rounded card with background linear-gradient(135deg, #0F1B2D, #1E3A8A) and a subtle
+  dot-grid texture (radial-gradient, ≤6% opacity). White text: eyebrow "BUDGETPAGER · ON-CALL FOR YOUR
+  AD BUDGET", H1 "Aura & Co. Skincare", the "(fictional brand · demo account)" note in slate-300, and the
+  pitch "BudgetPager watches your campaigns around the clock and pages you only when money is at risk,
+  with the likely cause and a one-tap fix." A live status pill: pulsing green dot + "Watching 4 campaigns
+  · last check 8:00 PM IST". Mobile only (<768px): a compact duplicate "Open alerts inbox →" button
+  (white on the hero) directly under the pitch.
+- Hero KPI row: 4 glass tiles (white 10% fill, 1px white 20% border), live from app state:
+  "Spent today ₹6,092 of ₹7,000 (87%)", "At risk now ₹1,508" (value in red-300, set at 24px semibold so
+  it counts as WCAG large text), "Open incidents 3" (active = OPEN + ACKED), "Protected this session ₹0".
+  Numbers count up from 0 over ~700ms on first mount (requestAnimationFrame, tabular-nums); later changes
+  show immediately. Mobile: 2×2 grid; desktop: 4 across.
 - "Live campaigns" section built from app state (updates live on inject / action / reset):
   a table on desktop, one card per campaign on mobile (<768px). Fields: Campaign name · Objective ·
   Daily budget · Spent today (₹ and % of budget with a thin pacing bar; over 100% the bar is red with
   "over budget") · Conversions today · Status (Live / Paused / Budget capped) · Health (if it has OPEN or
   ACKED alerts: severity pill of the worst one + "N incident(s)", linking to that incident; else a green
-  "Healthy" check).
+  "Healthy" check). Plus a "Today" column: an inline SVG sparkline (~120×32, no Recharts) of hourly
+  spend for the IST day of demoNow() (x = hour of day, so the line ends at 8 PM); the line is slate-500,
+  and hours inside an OPEN/ACKED alert window for that campaign are drawn in red-600 with a light red
+  fill under them (series from todaySpendSeries in src/state/landingView.ts, ≤ 24 points, unit-tested:
+  c1's last two hours are flagged). Each row has a 4px left edge in its health colour (SEV1 red,
+  SEV2 amber, SEV3 slate, healthy green, paused slate). The SEV1 health pill has a soft pulsing ring.
+  Rows lift on hover (shadow only, no layout shift). The Objective column shows from 1024px; between
+  768 and 1023px the table may scroll inside its own box, never the page.
+  Mobile cards: same left edge, and the sparkline full-width inside each card.
   "Spent today" / "Conversions today" are sums over the IST calendar day of demoNow() (sameIstDay).
   Seeded values: Diwali Sale ₹3,202 / ₹3,000 (107%), Retargeting ₹1,296 / ₹1,600 (81%),
   New arrivals ₹1,311 / ₹2,000 (66%), Brand awareness ₹283 / ₹400 (71%) (unit-tested).
 - Below the table, a nudge banner: "{n} campaigns need attention · ₹{atRisk} at risk now" with the
-  primary "Open alerts inbox →" button (blue accent, ≥44px tall). If nothing is open: "All campaigns
-  healthy" with a secondary button.
-- Under that, four compact capability rows: Detect (seasonal baselines, 5 failure classes) → /inbox ·
-  Diagnose (causal metric tree) → /inbox · Act (one-tap fixes, checklist) → /inbox · Tune (Rule
-  Sandbox, precision vs recall) → /rules. Footer line stays.
+  primary "Open alerts inbox →" button (blue accent, ≥44px tall). Background
+  linear-gradient(90deg, #FEF2F2, #FFF7ED), 4px red-600 left border, red AlertTriangle icon; the CTA
+  arrow moves 4px right on hover. If nothing is open: "All campaigns healthy" (neutral white) with a
+  secondary button.
+- Under that, four capability cards in a grid (2×2 on desktop, stacked on mobile), each a whole-card
+  link with a 40px rounded icon tile (tinted background + solid icon), title, one-line description and a
+  "→": Detect (blue; seasonal baselines, 5 failure classes) → /inbox · Diagnose (violet; causal metric
+  tree) → /inbox · Act (green; one-tap fixes, checklist) → /inbox · Tune (amber; Rule Sandbox,
+  precision vs recall) → /rules. Footer line stays.
+- Page background below the hero: linear-gradient(180deg, #F4F6F9, #EEF3FF), full-bleed without
+  horizontal scroll.
+- Entry motion: sections fade + rise 8px with a 60ms stagger on first mount.
+- Accessibility: every animation (live-dot pulse, SEV1 ring, count-up, rise, hover translate) runs only
+  under prefers-reduced-motion: no-preference; with reduced motion nothing animates and numbers render
+  final values immediately. All text ≥4.5:1 (white / slate-200 / slate-300 on the hero gradient and
+  glass tiles), except the red-300 "At risk" value, which is large text (≥3:1, measured ≥4.1:1).
 - Unknown URLs redirect here. Deep links /inbox, /incident/:id, /rules and /notifications work directly.
 
 ### 1. Incident Inbox (route /inbox)

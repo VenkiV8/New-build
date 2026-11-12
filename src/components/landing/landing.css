@@ -1,0 +1,63 @@
+/* Landing page only. Every animation lives inside prefers-reduced-motion: no-preference;
+   with reduced motion nothing moves (count-up is handled in useCountUp). */
+
+/* Hero band: navy → blue gradient with a subtle dot grid (≤6% opacity). */
+.bp-hero {
+  background:
+    radial-gradient(rgb(255 255 255 / 0.06) 1px, transparent 1.2px) 0 0 / 16px 16px,
+    linear-gradient(135deg, #0f1b2d 0%, #1e3a8a 100%);
+}
+
+/* Page background below the hero, full-bleed without causing horizontal scroll:
+   border-image outset paints beyond the box but is ink overflow (never scrollable). */
+.bp-page-bg {
+  border-image: linear-gradient(180deg, #f4f6f9, #eef3ff) fill 0 / / 1.5rem 100vmax 100vmax;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  /* live status dot */
+  .bp-live-dot::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    border-radius: 9999px;
+    background: #4ade80;
+    animation: bp-ping 1.6s cubic-bezier(0, 0, 0.2, 1) infinite;
+  }
+  @keyframes bp-ping {
+    75%,
+    100% {
+      transform: scale(2.4);
+      opacity: 0;
+    }
+  }
+
+  /* SEV1 health pill: soft pulsing ring */
+  .bp-pulse-ring {
+    animation: bp-ring 2s ease-out infinite;
+  }
+  @keyframes bp-ring {
+    0% {
+      box-shadow: 0 0 0 0 rgb(220 38 38 / 0.35);
+    }
+    70%,
+    100% {
+      box-shadow: 0 0 0 6px rgb(220 38 38 / 0);
+    }
+  }
+
+  /* entry motion: fade + rise 8px, staggered via animation-delay */
+  .bp-rise {
+    animation: bp-rise 420ms ease-out both;
+  }
+  @keyframes bp-rise {
+    from {
+      opacity: 0;
+      transform: translateY(8px);
+    }
+    to {
+      opacity: 1;
+      transform: none;
+    }
+  }
+}

@@ -1,51 +1,59 @@
 import { useMemo } from "react";
-import { Link } from "react-router-dom";
 import { AttentionBanner } from "@/components/landing/AttentionBanner";
 import { CampaignTable } from "@/components/landing/CampaignTable";
 import { CapabilityRows } from "@/components/landing/CapabilityRows";
-import { ADVERTISER } from "@/state/account";
+import { LandingHero } from "@/components/landing/LandingHero";
+import "@/components/landing/landing.css";
+import { CAMPAIGNS, demoNow } from "@/lib/dataGenerator";
+import { TOTAL_DAILY_BUDGET_INR } from "@/state/account";
 import { useApp } from "@/state/appContext";
-import { campaignOverview } from "@/state/landingView";
+import { campaignOverview, todaySpendSeries } from "@/state/landingView";
 import { atRiskNow } from "@/state/protection";
+import { formatClockTime } from "@/utils/format";
+
+/** Section wrapper: fade + rise 8px on first mount, 60ms stagger (motion-safe only, see landing.css). */
+const rise = (i: number) => ({ className: "bp-rise", style: { animationDelay: `${i * 60}ms` } });
 
 export default function LandingPage() {
-  const { history, alerts, statuses, campaignState } = useApp();
+  const { history, alerts, statuses, campaignState, protectedInr } = useApp();
   // Live: recomputed on every inject / action / reset.
   const rows = useMemo(
     () => campaignOverview(history, alerts, statuses, campaignState),
     [history, alerts, statuses, campaignState],
   );
+  const spark = useMemo(
+    () => Object.fromEntries(rows.map((r) => [r.campaign.id, todaySpendSeries(history, r.campaign.id, r.activeAlerts)])),
+    [rows, history],
+  );
   const risk = useMemo(() => atRiskNow(alerts, statuses), [alerts, statuses]);
   const needAttention = rows.filter((r) => r.activeAlerts.length > 0).length;
+  const spentToday = rows.reduce((s, r) => s + r.spentToday, 0);
 
   return (
-    <div className="space-y-6 py-2 md:py-6">
-      <section className="max-w-2xl space-y-3">
-        <p className="text-xs font-medium tracking-wide text-slate-500 uppercase">
-          BudgetPager · on-call for your ad budget
-        </p>
-        <div>
-          <h1 className="text-3xl font-semibold tracking-tight text-slate-900 md:text-4xl">{ADVERTISER}</h1>
-          <p className="mt-1 text-sm text-slate-500">(fictional brand · demo account)</p>
-        </div>
-        <p className="text-base text-slate-600 md:text-lg">
-          BudgetPager watches your campaigns around the clock and pages you only when money is at risk, with the
-          likely cause and a one-tap fix.
-        </p>
-        {/* Mobile only: compact duplicate of the banner's primary button */}
-        <Link
-          to="/inbox"
-          className="inline-flex min-h-11 items-center rounded-lg bg-brand px-4 text-sm font-semibold text-white shadow-sm hover:bg-brand-ink focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2 focus-visible:outline-none md:hidden"
-        >
-          Open alerts inbox →
-        </Link>
-      </section>
+    <div className="bp-page-bg space-y-6 pb-2">
+      <div {...rise(0)}>
+        <LandingHero
+          campaigns={CAMPAIGNS.length}
+          asOf={`${formatClockTime(demoNow())} IST`}
+          spentToday={spentToday}
+          totalBudget={TOTAL_DAILY_BUDGET_INR}
+          atRiskInr={risk.totalInr}
+          activeIncidents={risk.activeCount}
+          protectedInr={protectedInr}
+        />
+      </div>
 
-      <CampaignTable rows={rows} />
+      <div {...rise(1)}>
+        <CampaignTable rows={rows} spark={spark} />
+      </div>
 
-      <AttentionBanner campaignsNeedingAttention={needAttention} atRiskInr={risk.totalInr} />
+      <div {...rise(2)}>
+        <AttentionBanner campaignsNeedingAttention={needAttention} atRiskInr={risk.totalInr} />
+      </div>
 
-      <CapabilityRows />
+      <div {...rise(3)}>
+        <CapabilityRows />
+      </div>
     </div>
   );
 }

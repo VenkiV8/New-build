@@ -2,9 +2,18 @@ import { Link } from "react-router-dom";
 import { CircleCheck } from "lucide-react";
 import { cn } from "cn";
 import { SeverityChip } from "@/components/alerts/SeverityChip";
-import { CAMPAIGN_STATE_LABEL, OBJECTIVE_LABEL, type CampaignRow } from "@/state/landingView";
+import { CAMPAIGN_STATE_LABEL, OBJECTIVE_LABEL, type CampaignRow, type SparkPoint } from "@/state/landingView";
 import type { CampaignState } from "@/state/protection";
 import { formatInr } from "@/utils/format";
+import { Sparkline } from "./Sparkline";
+
+/** 4px left edge colour: paused slate, else worst active severity, else healthy green. */
+function healthEdge(row: CampaignRow): string {
+  if (row.state === "paused") return "#64748b";
+  if (!row.worst) return "#16a34a";
+  return row.worst.severity === "SEV1" ? "#dc2626" : row.worst.severity === "SEV2" ? "#d97706" : "#64748b";
+}
+const edgeStyle = (row: CampaignRow) => ({ boxShadow: `inset 4px 0 0 ${healthEdge(row)}` });
 
 const STATE_STYLES: Record<CampaignState, string> = {
   active: "bg-ok/10 text-ok-ink",
@@ -58,8 +67,10 @@ function Health({ row }: { row: CampaignRow }) {
       to={`/incident/${encodeURIComponent(row.worst.id)}`}
       className="inline-flex min-h-10 items-center gap-1.5 text-sm text-slate-700 hover:text-slate-900 md:min-h-0"
     >
-      <SeverityChip severity={row.worst.severity} />
-      <span className="underline decoration-slate-300 underline-offset-2">
+      <span className={cn("inline-flex rounded", row.worst.severity === "SEV1" && "bp-pulse-ring")}>
+        <SeverityChip severity={row.worst.severity} />
+      </span>
+      <span className="whitespace-nowrap underline decoration-slate-300 underline-offset-2">
         {n} incident{n === 1 ? "" : "s"}
       </span>
     </Link>
@@ -67,7 +78,7 @@ function Health({ row }: { row: CampaignRow }) {
 }
 
 /** Live campaigns: table from md, one card per campaign below. */
-export function CampaignTable({ rows }: { rows: CampaignRow[] }) {
+export function CampaignTable({ rows, spark }: { rows: CampaignRow[]; spark: Record<string, SparkPoint[]> }) {
   return (
     <section aria-labelledby="live-campaigns" className="space-y-3">
       <h2 id="live-campaigns" className="text-base font-semibold text-slate-900">
@@ -75,31 +86,38 @@ export function CampaignTable({ rows }: { rows: CampaignRow[] }) {
       </h2>
 
       {/* Desktop table */}
-      <div className="hidden overflow-hidden rounded-xl border border-slate-200 bg-white md:block">
-        <table className="w-full text-left text-sm">
+      <div className="hidden overflow-x-auto rounded-xl border border-slate-200 bg-white md:block">
+        <table className="w-full border-separate border-spacing-0 text-left text-sm">
           <thead className="bg-slate-50 text-xs text-slate-500">
             <tr>
               <th scope="col" className="px-4 py-2 font-medium">Campaign</th>
-              <th scope="col" className="px-3 py-2 font-medium">Objective</th>
+              <th scope="col" className="hidden px-3 py-2 font-medium lg:table-cell">Objective</th>
               <th scope="col" className="px-3 py-2 text-right font-medium">Daily budget</th>
               <th scope="col" className="px-3 py-2 font-medium">Spent today</th>
+              <th scope="col" className="px-3 py-2 font-medium">Today</th>
               <th scope="col" className="px-3 py-2 text-right font-medium">Conversions today</th>
               <th scope="col" className="px-3 py-2 font-medium">Status</th>
               <th scope="col" className="px-4 py-2 font-medium">Health</th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-slate-100">
+          <tbody>
             {rows.map((row) => (
-              <tr key={row.campaign.id} className="align-middle">
-                <th scope="row" className="px-4 py-3 font-medium text-slate-900">
+              <tr
+                key={row.campaign.id}
+                className="align-middle transition-shadow hover:relative hover:z-10 hover:shadow-md [&>*]:border-t [&>*]:border-slate-100"
+              >
+                <th scope="row" className="px-4 py-3 font-medium text-slate-900" style={edgeStyle(row)}>
                   {row.campaign.name}
                 </th>
-                <td className="px-3 py-3 text-slate-600">{OBJECTIVE_LABEL[row.campaign.objective]}</td>
+                <td className="hidden px-3 py-3 text-slate-600 lg:table-cell">{OBJECTIVE_LABEL[row.campaign.objective]}</td>
                 <td className="px-3 py-3 text-right text-slate-700 tabular-nums">
                   {formatInr(row.campaign.dailyBudgetInr)}
                 </td>
                 <td className="px-3 py-3">
                   <Pacing row={row} />
+                </td>
+                <td className="px-3 py-3">
+                  <Sparkline points={spark[row.campaign.id] ?? []} />
                 </td>
                 <td className="px-3 py-3 text-right text-slate-900 tabular-nums">{row.conversionsToday}</td>
                 <td className="px-3 py-3">
@@ -117,7 +135,11 @@ export function CampaignTable({ rows }: { rows: CampaignRow[] }) {
       {/* Mobile cards */}
       <ul className="space-y-2 md:hidden">
         {rows.map((row) => (
-          <li key={row.campaign.id} className="rounded-xl border border-slate-200 bg-white p-4">
+          <li
+            key={row.campaign.id}
+            className="rounded-xl border border-slate-200 bg-white p-4"
+            style={edgeStyle(row)}
+          >
             <div className="flex items-start justify-between gap-2">
               <p className="min-w-0 font-medium text-slate-900">{row.campaign.name}</p>
               <StatusPill state={row.state} />
@@ -142,6 +164,10 @@ export function CampaignTable({ rows }: { rows: CampaignRow[] }) {
                 <dd className="text-slate-900 tabular-nums">{row.conversionsToday}</dd>
               </div>
             </dl>
+            <div className="mt-3">
+              <p className="mb-1 text-xs text-slate-500">Today</p>
+              <Sparkline points={spark[row.campaign.id] ?? []} fluid />
+            </div>
             <div className="mt-2 border-t border-slate-100 pt-2">
               <Health row={row} />
             </div>

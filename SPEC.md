@@ -23,45 +23,65 @@ with a diagnosis and a one-tap fix. Severity is measured in ₹ at risk, not met
 - 1 advertiser ("Aura & Co. Skincare", a fictional brand; account owner: Arjun Mehta, Owner) with 4 campaigns:
   C1 "Diwali Sale — Search intent" (₹3,000/day), C2 "Retargeting — Cart abandoners" (₹1,600/day),
   C3 "New arrivals — Contextual display" (₹2,000/day), C4 "Brand awareness" (₹400/day).
-- 30 days of hourly data per campaign, ending at the most recent 8:00 PM (demoNow() —
-  anchoring to the evening peak keeps injected incidents meaningful at any load time;
-  show "Data as of 8:00 PM" subtly in the header). Hour-of-week seasonality + noise.
+- 30 days of hourly data per campaign. The demo clock is FIXED: demoNow() = DEMO_NOW_TS =
+  Tue 10 Nov 2026, 8:00 PM IST (the evening peak, so injected incidents are meaningful). Hour-of-week
+  and calendar-day logic run in IST (istParts, sameIstDay, IST_OFFSET_MS in dataGenerator.ts).
+  Show "Data as of 8:00 PM IST" subtly in the header. Hour-of-week seasonality + noise.
+- Time display: every date/time the UI shows is formatted with timeZone "Asia/Kolkata", never the
+  viewer's local zone. Nothing in the UI uses Date.now() or the wall clock; "now" is always demoNow().
+  The data's last hour is 8–9 PM IST, so "started Xh ago" is measured from its END
+  (demoNow() + 1h − alert.startedAt), matching headline durations (tracking break "0 for 4h" →
+  "started 4h ago"; spend runaway 2h; drift 3h).
 - 3 pre-seeded incidents in the last 48h (one tracking break, one spend runaway, one CTR drift)
   so the inbox is never empty on first load.
 
 ## Screens (landing + 4)
 ### Top bar (every page)
 - Left: "BudgetPager" logo, linking to / (the landing page). Nav: Inbox (/inbox), Rules (/rules), Notifications (/notifications).
-- Right: "Data as of 8:00 PM" with a clock icon (desktop; on smaller screens it moves into the account menu),
+- Right: "Data as of 8:00 PM IST" with a clock icon (desktop; on smaller screens it moves into the account menu),
   then:
-  - Bell icon button with a red badge showing the count of OPEN alerts (badge hidden at 0),
-    aria-label "Open alerts: N"; links to /inbox.
+  - Bell icon button with a red badge showing the count of OPEN (unacknowledged) alerts only
+    (badge hidden at 0), aria-label "Open alerts: N"; links to /inbox.
   - Avatar circle with initials "AC" opening a small read-only popover: "Aura & Co. Skincare",
     "Advertiser account on BudgetPager", "Owner: Arjun Mehta", "4 campaigns · ₹7,000/day total budget",
-    "Data as of 8:00 PM". No sign-out or settings items (nothing fake that does nothing).
+    "Data as of 8:00 PM IST". No sign-out or settings items (nothing fake that does nothing).
   - Both are ≥40px tap targets. Adding them does not change the top bar's height.
 - Account details (advertiser, owner, total daily budget) come from one shared module (src/state/account.ts).
 
 ### 0. Landing (route /)
-- Single screen, no scrolling at 375px or 1280px, same theme.
-- Eyebrow "BudgetPager · on-call for your ad budget"; H1 "Aura & Co. Skincare" with a small slate
-  "(fictional brand · demo account)" under it.
-- Description: "BudgetPager watches your campaigns around the clock and pages you only when money is at
-  risk, with the likely cause and a one-tap fix."
-- Three live stat chips from app state: "{n} open incidents", "₹{x} at risk now" (same OPEN-alert
-  numbers as the inbox header), "4 campaigns monitored", with icons matching the inbox.
-- Primary button (blue accent, ≥44px tall) "Open alerts inbox →" to /inbox; secondary text link
-  "Tune alert rules" to /rules. Footer line stays.
+- Same theme. No horizontal scroll at 375px; the primary button is visible within the first two
+  screen heights on mobile.
+- Header block: eyebrow "BudgetPager · on-call for your ad budget"; H1 "Aura & Co. Skincare" with a
+  small slate "(fictional brand · demo account)" under it; description "BudgetPager watches your
+  campaigns around the clock and pages you only when money is at risk, with the likely cause and a
+  one-tap fix."
+- "Live campaigns" section built from app state (updates live on inject / action / reset):
+  a table on desktop, one card per campaign on mobile (<768px). Fields: Campaign name · Objective ·
+  Daily budget · Spent today (₹ and % of budget with a thin pacing bar; over 100% the bar is red with
+  "over budget") · Conversions today · Status (Live / Paused / Budget capped) · Health (if it has OPEN or
+  ACKED alerts: severity pill of the worst one + "N incident(s)", linking to that incident; else a green
+  "Healthy" check).
+  "Spent today" / "Conversions today" are sums over the IST calendar day of demoNow() (sameIstDay).
+  Seeded values: Diwali Sale ₹3,202 / ₹3,000 (107%), Retargeting ₹1,296 / ₹1,600 (81%),
+  New arrivals ₹1,311 / ₹2,000 (66%), Brand awareness ₹283 / ₹400 (71%) (unit-tested).
+- Below the table, a nudge banner: "{n} campaigns need attention · ₹{atRisk} at risk now" with the
+  primary "Open alerts inbox →" button (blue accent, ≥44px tall). If nothing is open: "All campaigns
+  healthy" with a secondary button.
+- Under that, four compact capability rows: Detect (seasonal baselines, 5 failure classes) → /inbox ·
+  Diagnose (causal metric tree) → /inbox · Act (one-tap fixes, checklist) → /inbox · Tune (Rule
+  Sandbox, precision vs recall) → /rules. Footer line stays.
 - Unknown URLs redirect here. Deep links /inbox, /incident/:id, /rules and /notifications work directly.
 
 ### 1. Incident Inbox (route /inbox)
 - Header: advertiser name and three stats:
-  "At risk now" = sum of inrAtRiskTotal for OPEN alerts, subtitle "across N open incidents";
+  "At risk now" = sum of inrAtRiskTotal for ACTIVE alerts (OPEN or ACKED: acknowledged is not
+  fixed), subtitle "across N open incidents";
   "Protected this session" = starts at ₹0; when an action resolves an alert (Pause / Cap budget /
   Mark fixed etc., not Snooze, Mark expected or opening the tracking checklist) add
-  min(alert.inrAtRiskPerHour × 24, campaign.dailyBudgetInr) (rest-of-day exposure avoided; a campaign
-  cannot lose more than its daily budget in a day) and toast "Up to ₹X/day exposure stopped";
-  resets with the demo;
+  min(alert.inrAtRiskPerHour × hoursLeftToday, campaign.dailyBudgetInr), where hoursLeftToday is derived
+  from demoNow(): data runs to the end of the 8–9 PM IST hour, so 24 − 21 = 3. Subtitle "exposure stopped
+  for the rest of today"; toast "≈ ₹X of exposure stopped for the rest of today (3 h)" (pausing the
+  seeded c1 spend runaway credits ₹1,254 = 418 × 3; unit-tested); resets with the demo;
   alert-budget indicator ("2 of 5 daily alerts used").
   Stat tiles carry icons: At risk now (alert triangle, red), Protected (shield, green), Alert budget (gauge, blue).
 - Campaign health strip: one chip per campaign with evaluateEligibility().summary
@@ -69,20 +89,35 @@ with a diagnosis and a one-tap fix. Severity is measured in ₹ at risk, not met
   (data freshness, learning phase, conversion volume, traffic volume) with pass/fallback + detail.
   This visibly shows WHY a low-volume campaign is not spamming alerts.
   Chips wrap (no horizontal scroll); campaigns with any fallback gate sort first, with amber border/icon.
+  Chips reflect live rule toggles: if any rule is off the summary says e.g. "1 rule off" (after the
+  fallback summary when both apply) and the popover lists the rules turned off. Popover caption:
+  "Gates shown as policy; this prototype evaluates them but does not yet suppress alerts."
+  A paused or capped campaign shows a "Paused" / "Budget capped" tag on its chip.
+  Mobile (<768px): the chips collapse into one chip, e.g. "4 campaigns · 1 on fallback ▸", that expands
+  on tap. Desktop always shows every chip.
+- Campaign state: app state holds campaignState: Record<campaignId, 'active' | 'paused' | 'capped'>.
+  "Pause campaign" (incident page or the phone mock) sets paused; "Cap today's budget" sets capped.
+  Reset demo restores all to active.
 - List of alert cards: Open (and Acked) first, then Resolved / Expected / Snoozed; ₹ at risk (desc) within
   each group. The alert budget still pages the top 5 by ₹. Card: severity chip (SEV1 red / SEV2 amber / SEV3 grey),
   failure-class icon + label, campaign name, one-line summary ("Conversions = 0 for 3h while 142 clicks
-  billed — est. ₹1,340 at risk"), "started Xh ago · caught Nh after onset" (N = the rule's minHours),
-  status (Open / Acked / Resolved / Expected / Snoozed). Alerts beyond the 5/day alert budget show in a
-  "folded into today's digest" section.
+  billed — est. ₹1,340 at risk"), "started Xh ago · caught Nh after onset" (N = the rule's minHours;
+  "started" measured from the end of the last data hour, see Demo data),
+  status (Open / Acked / Resolved / Expected / Snoozed). Acknowledged is not fixed: Open and Acked cards
+  render as active; only Resolved / Expected / Snoozed are closed (greyed). Alerts beyond the 5/day alert
+  budget show in a "folded into today's digest" section.
+- Mobile (<768px): the first incident card appears in the first viewport (375×812).
 - Demo toolbar (clearly marked "Demo controls"): [Inject: Tracking break] [Inject: Spend runaway]
   [Inject: Delivery failure] [Reset demo]. Injecting mutates the data for one campaign's recent hours,
   re-runs the detector, and a new alert animates into the inbox with a toast.
   Injection is planned on a copy first; live data changes only if a new alert is confirmed.
   Targets, in order: Tracking break c2 → c1; Spend runaway c1 → c3 → c2; Delivery failure c4.
-  A target that already has that class of incident is skipped, and so is one where the injection
-  would not trip the detector (e.g. c3's seeded CTR drift halves its spend, masking a spend surge).
-  "Already open" only when every target has one; otherwise "No campaign would trip … right now".
+  Skipped targets: paused campaigns; campaigns with an ACTIVE (OPEN or ACKED) incident of that class;
+  and ones where the injection would not trip the detector (e.g. c3's seeded CTR drift halves its spend,
+  masking a spend surge). A RESOLVED / EXPECTED / SNOOZED incident does not block: re-injecting on that
+  campaign re-fires the incident and reopens it.
+  If no target is eligible: toast "All eligible campaigns are paused or already have this incident";
+  if targets are eligible but none would trip the detector: "No campaign would trip … right now".
   The controls are visually a "lab" tool (dashed slate border, beaker icon), never product UI.
   Desktop (≥768px): bar fixed to the bottom; the page reserves bottom padding so it never covers the
   last card. Mobile (<768px): a floating "Demo ▸" pill at bottom-right that expands into the full
@@ -107,13 +142,14 @@ with a diagnosis and a one-tap fix. Severity is measured in ₹ at risk, not met
 - alertWindowHours = hours between alert.startedAt and the last data point (+1), min 1.
 - Action row: primary one-tap action per class (Pause campaign / Cap budget / Open tracking checklist /
   Snooze 24h / Mark expected — "it's Diwali"). Actions update alert status in client state and toast.
-  "Mark expected" says the date is added to the campaign's expected-events calendar.
+  "Mark expected" toast: "Marked expected. In production this date joins the campaign's event calendar
+  so the baseline learns." "Pause campaign" / "Cap today's budget" also set the campaign's state (§1).
   Actions stay available while an alert is Acked (Acked is not closed).
 - "Open tracking checklist" opens a dialog instead of resolving. It has 3 checkbox steps:
   "Conversion pixel fires on the order-confirmation page (use Tag Assistant / test order)",
   "No site deploy changed checkout in the last 24h", "Test conversion recorded in reporting".
   Opening it sets status Acked (no ₹ credit). "Mark fixed", enabled when all 3 are ticked, resolves the
-  alert and credits ₹ as in §1.
+  alert and credits ₹ as in §1; once enabled it shows "· ≈ ₹X rest of today".
 - Under the action row on every incident page: "Automation policy: only a SEV1 spend runaway can
   auto-pause (if no one acknowledges it within 30 min). Every other action needs one human tap, because
   a wrong auto-pause on a flagship campaign costs more than the anomaly."
@@ -142,7 +178,8 @@ with a diagnosis and a one-tap fix. Severity is measured in ₹ at risk, not met
   "Pause" performs the same action as Pause on the incident page for that alert (status update +
   "Protected this session" + toast), then shows "Paused ✓"; "View" stays static.
 - Mock daily-digest email card. Mocks are driven by the latest real alerts in state.
-- "Noise controls" panel (static explanatory UI, no logic needed): incident grouping (if >50% of
+- "Noise controls" panel (static explanatory UI, no logic needed), tagged "Policy · not simulated in
+  this prototype": incident grouping (if >50% of
   campaigns break on the same metric in the same hour, send ONE account-level incident), 24h cooldown
   after Ack unless severity escalates, SEV1 unacknowledged for 30 min escalates to backup contact,
   "Mark expected" feeds the event calendar so the baseline learns.
@@ -166,7 +203,7 @@ Global guardrail: alert budget = max 5 alerts/day per advertiser; lowest-₹ ale
 - Font: IBM Plex Sans (400/500/600). All ₹ amounts and metric numbers use tabular-nums.
 - Colour tokens live as CSS variables in src/index.css:
   top bar navy #0f1b2d with white text; active nav item white with a 2px #3b82f6 underline;
-  "Data as of 8:00 PM" slate-300 with a clock icon. Accent (links, primary buttons, selected states,
+  "Data as of 8:00 PM IST" slate-300 with a clock icon. Accent (links, primary buttons, selected states,
   slider fill, switches on) blue #2563eb. Severity: SEV1 red #dc2626, SEV2 amber #d97706, SEV3 slate
   #64748b. Healthy/protected green #16a34a. Text on a 10% tint of these uses a darker shade of the
   same hue for AA (red-700, amber-800, slate-600, green-800, blue-700).
@@ -183,6 +220,8 @@ Global guardrail: alert budget = max 5 alerts/day per advertiser; lowest-₹ ale
 - Top of inbox: dismissible "Try this in 60 seconds" strip: 1) Inject a tracking break
   2) Open the incident 3) See the ₹ math 4) Tune the rule in Sandbox. Steps 2 and 3 link to the most
   recent open incident (the last injected one while it is open); step 3 scrolls to the Root cause panel.
+  Mobile (<768px): collapsed to a one-line banner "New here? Try the 60-second tour ▸" that expands on
+  tap. Desktop shows the full strip.
 - Every page: footer "Prototype · synthetic data, generated in-browser · no backend"; a simple skeleton
   while a page loads; favicon, <title> "BudgetPager — on-call for your ad budget", meta description.
 

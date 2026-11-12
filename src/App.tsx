@@ -1,5 +1,6 @@
 import { lazy } from "react";
 import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
+import { TourTracker } from "@/components/inbox/TourTracker";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { Toaster } from "@/components/ui/sonner";
 import InboxPage from "@/pages/InboxPage";
@@ -15,6 +16,8 @@ export default function App() {
   return (
     <AppProvider>
       <BrowserRouter>
+        {/* renders nothing; records tour progress from route visits */}
+        <TourTracker />
         <Routes>
           <Route element={<AppLayout />}>
             <Route index element={<LandingPage />} />

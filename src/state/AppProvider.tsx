@@ -7,6 +7,7 @@ import { formatInr } from "@/utils/format";
 import { AppContext, type AppState } from "./appContext";
 import { planInjection, type InjectableClass } from "./injection";
 import { clearSaved, freshSession, loadSession, persistSession, type DemoSession } from "./persistence";
+import { emptyTour, type TourProgress, type TourStep } from "./tour";
 import {
   campaignStateForAction,
   exposureStopped,
@@ -41,12 +42,14 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const [protectedInr, setProtectedInr] = useState(boot.protectedInr);
   const [lastInjectedId, setLastInjectedId] = useState<string | null>(null);
   const [campaignState, setCampaignState] = useState<Record<string, CampaignState>>(boot.campaignState);
+  const [tour, setTour] = useState<TourProgress>(boot.tour);
+  const markTour = useCallback((step: TourStep) => setTour((t) => (t[step] ? t : { ...t, [step]: true })), []);
 
   // Save after every state change (inject, action, ack, rule toggle). A pristine
   // session is not stored, so after Reset the key is gone.
   useEffect(() => {
-    persistSession({ ...data, statuses, campaignState, protectedInr });
-  }, [data, statuses, campaignState, protectedInr]);
+    persistSession({ ...data, statuses, campaignState, protectedInr, tour });
+  }, [data, statuses, campaignState, protectedInr, tour]);
 
   const applyAction = useCallback(
     (alertId: string, action: string) => {
@@ -110,11 +113,12 @@ export function AppProvider({ children }: { children: ReactNode }) {
         });
       }
       setLastInjectedId(added.id);
+      markTour("injected");
       toast.error(`${added.severity} · ${classLabel(added.failureClass)}: ${campaignName(added.campaignId)}`, {
         description: `${formatInr(added.inrAtRiskPerHour)}/h at risk. ${added.headline}`,
       });
     },
-    [data, statuses, campaignState],
+    [data, statuses, campaignState, markTour],
   );
 
   const setRuleEnabled = useCallback((failureClass: FailureClass, enabled: boolean) => {
@@ -135,6 +139,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     setProtectedInr(fresh.protectedInr);
     setLastInjectedId(null);
     setCampaignState(fresh.campaignState);
+    setTour(emptyTour());
     toast.success("Demo reset", { description: "Back to the 3 seeded incidents, all rules on, all campaigns active." });
   }, []);
 
@@ -146,13 +151,15 @@ export function AppProvider({ children }: { children: ReactNode }) {
       statuses,
       protectedInr,
       campaignState,
+      tour,
+      markTour,
       applyAction,
       inject,
       lastInjectedId,
       setRuleEnabled,
       resetDemo,
     }),
-    [data, statuses, protectedInr, campaignState, applyAction, inject, lastInjectedId, setRuleEnabled, resetDemo],
+    [data, statuses, protectedInr, campaignState, tour, markTour, applyAction, inject, lastInjectedId, setRuleEnabled, resetDemo],
   );
 
   return <AppContext.Provider value={value}>{children}</AppContext.Provider>;

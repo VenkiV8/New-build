@@ -2,6 +2,7 @@ import { createContext, useContext } from "react";
 import type { Alert, AlertStatus, CampaignHistory, FailureClass, RuleConfig } from "@/lib/types";
 import type { InjectableClass } from "./injection";
 import type { CampaignState } from "./protection";
+import type { TourProgress, TourStep } from "./tour";
 
 export interface AppState {
   history: CampaignHistory;
@@ -12,6 +13,9 @@ export interface AppState {
   protectedInr: number;
   /** per campaign: active / paused (Pause campaign) / capped (Cap today's budget); reset restores active */
   campaignState: Record<string, CampaignState>;
+  /** "Try this in 60 seconds" progress (persisted with the session; reset clears it) */
+  tour: TourProgress;
+  markTour: (step: TourStep) => void;
   /** apply a suggested action: sets the alert's status; fixes add to protectedInr */
   applyAction: (alertId: string, action: string) => void;
   inject: (failureClass: InjectableClass) => void;

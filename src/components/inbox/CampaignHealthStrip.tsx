@@ -8,6 +8,19 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { healthStripSummary, healthSummary } from "@/state/inboxView";
 import type { CampaignState } from "@/state/protection";
 
+type Tone = "green" | "amber" | "slate";
+/** Tinted chip backgrounds: healthy green, fallback amber, paused / capped / rules-off slate. */
+const TONE: Record<Tone, { chip: string; icon: string }> = {
+  green: { chip: "border-green-200 bg-green-50 text-green-700 hover:border-green-300", icon: "text-green-600" },
+  amber: { chip: "border-amber-300 bg-amber-50 text-amber-800 hover:border-amber-400", icon: "text-amber-600" },
+  slate: { chip: "border-slate-200 bg-slate-100 text-slate-700 hover:border-slate-300", icon: "text-slate-500" },
+};
+function toneFor(state: CampaignState, hasFallback: boolean, rulesOff: number): Tone {
+  if (state !== "active") return "slate";
+  if (hasFallback) return "amber";
+  return rulesOff > 0 ? "slate" : "green";
+}
+
 const STATE_LABEL: Record<Exclude<CampaignState, "active">, string> = {
   paused: "Paused",
   capped: "Budget capped",
@@ -33,6 +46,8 @@ export function CampaignHealthStrip({ history, rules, campaignState }: Props) {
   // Mobile only: collapsed into one chip until tapped; desktop always shows every chip.
   const [expanded, setExpanded] = useState(false);
   const onFallback = rows.filter((r) => r.hasFallback).length;
+  const anyNotActive = rows.some((r) => (campaignState[r.campaign.id] ?? "active") !== "active");
+  const collapsedTone: Tone = onFallback > 0 ? "amber" : rulesOff.length > 0 || anyNotActive ? "slate" : "green";
 
   return (
     <section aria-label="Campaign health">
@@ -43,14 +58,14 @@ export function CampaignHealthStrip({ history, rules, campaignState }: Props) {
           aria-expanded={false}
           aria-controls="campaign-health-chips"
           className={cn(
-            "flex min-h-10 items-center gap-1.5 rounded-full border bg-white px-3 text-left text-xs text-slate-700 shadow-xs md:hidden",
-            onFallback > 0 ? "border-sev2/50" : "border-slate-200",
+            "flex min-h-10 items-center gap-1.5 rounded-full border px-3 text-left text-xs shadow-xs md:hidden",
+            TONE[collapsedTone].chip,
           )}
         >
-          {onFallback > 0 || rulesOff.length > 0 ? (
-            <CircleAlert className={cn("size-4 shrink-0", onFallback > 0 ? "text-sev2" : "text-slate-500")} aria-hidden />
+          {collapsedTone === "green" ? (
+            <CircleCheck className={cn("size-4 shrink-0", TONE.green.icon)} aria-hidden />
           ) : (
-            <CircleCheck className="size-4 shrink-0 text-ok" aria-hidden />
+            <CircleAlert className={cn("size-4 shrink-0", TONE[collapsedTone].icon)} aria-hidden />
           )}
           <span className="font-medium">{healthStripSummary(rows.length, onFallback, rulesOff.length)}</span>
           <span aria-hidden>▸</span>
@@ -59,7 +74,7 @@ export function CampaignHealthStrip({ history, rules, campaignState }: Props) {
       <ul id="campaign-health-chips" className={cn("flex-wrap gap-2", expanded ? "flex" : "hidden md:flex")}>
         {rows.map(({ campaign, eligibility, hasFallback }) => {
           const state = campaignState[campaign.id] ?? "active";
-          const allClear = !hasFallback && rulesOff.length === 0;
+          const tone = toneFor(state, hasFallback, rulesOff.length);
           return (
             <li key={campaign.id} className="max-w-full">
               <Popover>
@@ -67,26 +82,21 @@ export function CampaignHealthStrip({ history, rules, campaignState }: Props) {
                   <button
                     type="button"
                     className={cn(
-                      "flex min-h-10 max-w-full items-center gap-1.5 rounded-full border bg-white px-3 py-1.5 md:min-h-0 text-left text-xs text-slate-700 shadow-xs focus-visible:ring-2 focus-visible:ring-brand focus-visible:outline-none",
-                      hasFallback ? "border-sev2/50 hover:border-sev2" : "border-slate-200 hover:border-slate-300",
+                      "flex min-h-10 max-w-full items-center gap-1.5 rounded-full border px-3 py-1.5 md:min-h-0 text-left text-xs shadow-xs focus-visible:ring-2 focus-visible:ring-brand focus-visible:outline-none",
+                      TONE[tone].chip,
                     )}
                   >
-                    {allClear ? (
-                      <CircleCheck className="size-4 shrink-0 text-ok" aria-hidden />
+                    {tone === "green" ? (
+                      <CircleCheck className={cn("size-4 shrink-0", TONE.green.icon)} aria-hidden />
                     ) : (
-                      <CircleAlert
-                        className={cn("size-4 shrink-0", hasFallback ? "text-sev2" : "text-slate-500")}
-                        aria-hidden
-                      />
+                      <CircleAlert className={cn("size-4 shrink-0", TONE[tone].icon)} aria-hidden />
                     )}
                     <span>
                       <span className="font-medium">{campaign.name}:</span>{" "}
-                      <span className="text-slate-500">
-                        {healthSummary(eligibility.summary, hasFallback, rulesOff.length)}
-                      </span>
+                      <span>{healthSummary(eligibility.summary, hasFallback, rulesOff.length)}</span>
                     </span>
                     {state !== "active" && (
-                      <span className="shrink-0 rounded-full bg-slate-100 px-1.5 py-0.5 text-[11px] font-medium text-slate-700">
+                      <span className="shrink-0 rounded-full bg-white/80 px-1.5 py-0.5 text-[11px] font-medium text-slate-700">
                         {STATE_LABEL[state]}
                       </span>
                     )}

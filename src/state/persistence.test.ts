@@ -142,3 +142,28 @@ describe("(c) Reset demo", () => {
     expect(atRiskNow(loadSession(storage).alerts, {}).totalInr).toBe(1_508);
   });
 });
+
+describe("tour progress persistence", () => {
+  it("round-trips tour progress; tour alone makes the session worth saving", () => {
+    const storage = memoryStorage();
+    const s = { ...freshSession(), tour: { injected: false, openedIncident: true, sawRootCause: false, visitedRules: true } };
+    persistSession(s, storage);
+    expect(storage.data.has(STORAGE_KEY)).toBe(true);
+    expect(loadSession(storage).tour).toEqual(s.tour);
+  });
+
+  it("older saves without a tour field still load (no steps done)", () => {
+    const { tour: _omit, ...legacy } = serialize(busySession());
+    void _omit;
+    const storage = memoryStorage({ [STORAGE_KEY]: JSON.stringify(legacy) });
+    const s = loadSession(storage);
+    expect(s.injections).toHaveLength(2);
+    expect(Object.values(s.tour).every((v) => v === false)).toBe(true);
+  });
+
+  it("a bad tour value → fresh start", () => {
+    const storage = memoryStorage({ [STORAGE_KEY]: JSON.stringify({ ...serialize(busySession()), tour: { injected: "yes" } }) });
+    expect(loadSession(storage).injections).toHaveLength(0);
+    expect(storage.data.has(STORAGE_KEY)).toBe(false);
+  });
+});

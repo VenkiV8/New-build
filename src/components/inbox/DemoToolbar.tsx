@@ -9,6 +9,12 @@ const INJECTS: { fc: InjectableClass; label: string }[] = [
   { fc: "DELIVERY_FAILURE", label: "Delivery failure" },
 ];
 
+/** Very faint diagonal "lab" stripes (4% slate) over white, so the controls never read as product UI. */
+const LAB_STRIPES = {
+  backgroundColor: "#ffffff",
+  backgroundImage: "repeating-linear-gradient(135deg, rgb(15 23 42 / 0.04) 0 6px, transparent 6px 12px)",
+};
+
 interface Props {
   onInject: (fc: InjectableClass) => void;
   onReset: () => void;
@@ -32,11 +38,12 @@ export function DemoToolbar({ onInject, onReset }: Props) {
       <div className="fixed inset-x-0 bottom-0 z-10 hidden px-4 pb-3 md:block">
         <section
           aria-label="Demo controls"
-          className="mx-auto max-w-5xl rounded-xl border border-dashed border-slate-300 bg-white/95 p-3 shadow-lg backdrop-blur"
+          className="mx-auto max-w-5xl rounded-xl border border-dashed border-slate-300 p-3 shadow-lg"
+          style={LAB_STRIPES}
         >
           <p className="mb-2 flex items-center gap-1.5 text-xs font-semibold tracking-wide text-slate-500 uppercase">
             <Beaker className="size-3.5" aria-hidden />
-            Demo controls
+            Demo controls · simulate an incident
           </p>
           <div className="flex flex-wrap gap-2">
             {INJECTS.map(({ fc, label }) => (
@@ -58,12 +65,13 @@ export function DemoToolbar({ onInject, onReset }: Props) {
           <section
             id="demo-controls-mobile"
             aria-label="Demo controls"
-            className="w-[min(20rem,calc(100vw-2rem))] rounded-xl border border-dashed border-slate-300 bg-white p-3 shadow-xl"
+            className="w-[min(20rem,calc(100vw-2rem))] rounded-xl border border-dashed border-slate-300 p-3 shadow-xl"
+            style={LAB_STRIPES}
           >
             <div className="mb-2 flex items-center justify-between">
               <p className="flex items-center gap-1.5 text-xs font-semibold tracking-wide text-slate-500 uppercase">
                 <Beaker className="size-3.5" aria-hidden />
-                Demo controls
+                Demo controls · simulate an incident
               </p>
               <button
                 type="button"

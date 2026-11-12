@@ -9,6 +9,7 @@ import { DEFAULT_RULES, detectAll } from "@/lib/detector";
 import type { Alert, AlertStatus, CampaignHistory, FailureClass, IncidentInjection, RuleConfig } from "@/lib/types";
 import { INJECTION_TARGETS, type InjectableClass } from "./injection";
 import { allCampaignsActive, type CampaignState } from "./protection";
+import { emptyTour, TOUR_STEPS, type TourProgress } from "./tour";
 
 export const STORAGE_KEY = "budgetpager:demo:v1";
 
@@ -22,6 +23,8 @@ export interface SavedDemo {
   campaignState: Record<string, CampaignState>;
   rulesEnabled: Record<FailureClass, boolean>;
   protectedInr: number;
+  /** "Try this" tour progress (optional: older saves without it load with no steps done) */
+  tour?: TourProgress;
 }
 
 /** Everything the app needs to run, rebuilt from a saved session (or fresh). */
@@ -33,13 +36,14 @@ export interface DemoSession {
   statuses: Record<string, AlertStatus>;
   campaignState: Record<string, CampaignState>;
   protectedInr: number;
+  tour: TourProgress;
 }
 
 const STATUSES: AlertStatus[] = ["OPEN", "ACKED", "RESOLVED", "SNOOZED", "EXPECTED"];
 const STATES: CampaignState[] = ["active", "paused", "capped"];
 const CAMPAIGN_IDS = CAMPAIGNS.map((c) => c.id);
 const RULE_CLASSES = DEFAULT_RULES.map((r) => r.failureClass);
-const SAVED_KEYS = ["v", "injections", "statuses", "campaignState", "rulesEnabled", "protectedInr"];
+const SAVED_KEYS = ["v", "injections", "statuses", "campaignState", "rulesEnabled", "protectedInr", "tour"];
 
 const isRecord = (x: unknown): x is Record<string, unknown> =>
   typeof x === "object" && x !== null && !Array.isArray(x);
@@ -56,6 +60,7 @@ export function freshSession(): DemoSession {
     statuses: {},
     campaignState: allCampaignsActive(),
     protectedInr: 0,
+    tour: emptyTour(),
   };
 }
 
@@ -68,6 +73,7 @@ export function serialize(s: DemoSession): SavedDemo {
     campaignState: { ...s.campaignState },
     rulesEnabled: Object.fromEntries(s.rules.map((r) => [r.failureClass, r.enabled])) as Record<FailureClass, boolean>,
     protectedInr: s.protectedInr,
+    tour: { ...s.tour },
   };
 }
 
@@ -78,7 +84,8 @@ export function isPristine(s: DemoSession): boolean {
     Object.keys(s.statuses).length === 0 &&
     Object.values(s.campaignState).every((c) => c === "active") &&
     s.rules.every((r) => r.enabled) &&
-    s.protectedInr === 0
+    s.protectedInr === 0 &&
+    TOUR_STEPS.every((k) => !s.tour[k])
   );
 }
 
@@ -113,6 +120,13 @@ export function parseSaved(raw: string): SavedDemo {
   if (typeof o.protectedInr !== "number" || !Number.isFinite(o.protectedInr) || o.protectedInr < 0)
     throw new Error("bad protectedInr");
 
+  let tour = emptyTour();
+  if (o.tour !== undefined) {
+    if (!isRecord(o.tour) || !hasOnlyKeys(o.tour, TOUR_STEPS)) throw new Error("bad tour");
+    for (const v of Object.values(o.tour)) if (typeof v !== "boolean") throw new Error("bad tour flag");
+    tour = { ...tour, ...(o.tour as Partial<TourProgress>) };
+  }
+
   return {
     v: 1,
     injections,
@@ -120,6 +134,7 @@ export function parseSaved(raw: string): SavedDemo {
     campaignState: o.campaignState as Record<string, CampaignState>,
     rulesEnabled: o.rulesEnabled as Record<FailureClass, boolean>,
     protectedInr: o.protectedInr,
+    tour,
   };
 }
 
@@ -143,6 +158,7 @@ export function rebuild(saved: SavedDemo): DemoSession {
     statuses,
     campaignState: { ...allCampaignsActive(), ...saved.campaignState },
     protectedInr: saved.protectedInr,
+    tour: { ...emptyTour(), ...saved.tour },
   };
 }
 

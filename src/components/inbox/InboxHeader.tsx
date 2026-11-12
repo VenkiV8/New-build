@@ -50,7 +50,7 @@ export function InboxHeader({ advertiser, atRiskInr, openCount, protectedInr, al
           iconClass="text-sev1"
           label="At risk now"
           value={formatInr(atRiskInr)}
-          sub={`across ${openCount} open incident${openCount === 1 ? "" : "s"}`}
+          sub={`across ${openCount} active incident${openCount === 1 ? "" : "s"}`}
         />
         <Stat
           icon={ShieldCheck}

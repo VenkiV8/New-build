@@ -1,4 +1,5 @@
 import { useMemo } from "react";
+import { Link } from "react-router-dom";
 import { AttentionBanner } from "@/components/landing/AttentionBanner";
 import { CampaignTable } from "@/components/landing/CampaignTable";
 import { CapabilityRows } from "@/components/landing/CapabilityRows";
@@ -31,6 +32,13 @@ export default function LandingPage() {
           BudgetPager watches your campaigns around the clock and pages you only when money is at risk, with the
           likely cause and a one-tap fix.
         </p>
+        {/* Mobile only: compact duplicate of the banner's primary button */}
+        <Link
+          to="/inbox"
+          className="inline-flex min-h-11 items-center rounded-lg bg-brand px-4 text-sm font-semibold text-white shadow-sm hover:bg-brand-ink focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2 focus-visible:outline-none md:hidden"
+        >
+          Open alerts inbox →
+        </Link>
       </section>
 
       <CampaignTable rows={rows} />

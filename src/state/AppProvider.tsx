@@ -1,13 +1,13 @@
-import { useCallback, useMemo, useState, type ReactNode } from "react";
+import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
 import { toast } from "sonner";
-import { CAMPAIGNS, generateSeededDemo } from "@/lib/dataGenerator";
+import { CAMPAIGNS } from "@/lib/dataGenerator";
 import { DEFAULT_RULES, detectAll } from "@/lib/detector";
-import type { Alert, AlertStatus, CampaignHistory, FailureClass, RuleConfig } from "@/lib/types";
+import type { Alert, AlertStatus, CampaignHistory, FailureClass, IncidentInjection, RuleConfig } from "@/lib/types";
 import { formatInr } from "@/utils/format";
 import { AppContext, type AppState } from "./appContext";
 import { planInjection, type InjectableClass } from "./injection";
+import { clearSaved, freshSession, loadSession, persistSession, type DemoSession } from "./persistence";
 import {
-  allCampaignsActive,
   campaignStateForAction,
   exposureStopped,
   hoursLeftToday,
@@ -19,22 +19,34 @@ interface Data {
   history: CampaignHistory;
   rules: RuleConfig[];
   alerts: Alert[];
+  /** injections applied so far, in order (persisted; replayed on load) */
+  injections: IncidentInjection[];
 }
 
-function seededData(): Data {
-  const history = generateSeededDemo();
-  return { history, rules: DEFAULT_RULES, alerts: detectAll(history, { rules: DEFAULT_RULES }) };
-}
+const dataOf = (s: DemoSession): Data => ({
+  history: s.history,
+  rules: s.rules,
+  alerts: s.alerts,
+  injections: s.injections,
+});
 
 const campaignName = (id: string) => CAMPAIGNS.find((c) => c.id === id)?.name ?? id;
 const classLabel = (fc: FailureClass) => DEFAULT_RULES.find((r) => r.failureClass === fc)?.label ?? fc;
 
 export function AppProvider({ children }: { children: ReactNode }) {
-  const [data, setData] = useState<Data>(seededData);
-  const [statuses, setStatuses] = useState<Record<string, AlertStatus>>({});
-  const [protectedInr, setProtectedInr] = useState(0);
+  // Saved session from localStorage if valid, else the seeded demo (identical first load).
+  const [boot] = useState(loadSession);
+  const [data, setData] = useState<Data>(() => dataOf(boot));
+  const [statuses, setStatuses] = useState<Record<string, AlertStatus>>(boot.statuses);
+  const [protectedInr, setProtectedInr] = useState(boot.protectedInr);
   const [lastInjectedId, setLastInjectedId] = useState<string | null>(null);
-  const [campaignState, setCampaignState] = useState<Record<string, CampaignState>>(allCampaignsActive);
+  const [campaignState, setCampaignState] = useState<Record<string, CampaignState>>(boot.campaignState);
+
+  // Save after every state change (inject, action, ack, rule toggle). A pristine
+  // session is not stored, so after Reset the key is gone.
+  useEffect(() => {
+    persistSession({ ...data, statuses, campaignState, protectedInr });
+  }, [data, statuses, campaignState, protectedInr]);
 
   const applyAction = useCallback(
     (alertId: string, action: string) => {
@@ -88,7 +100,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
         return;
       }
       const { added } = plan;
-      setData({ ...data, history: plan.history, alerts: plan.alerts });
+      setData({ ...data, history: plan.history, alerts: plan.alerts, injections: [...data.injections, plan.injection] });
       // Same incident firing again after it was closed: reopen it.
       if (plan.recurred) {
         setStatuses((s) => {
@@ -116,11 +128,13 @@ export function AppProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const resetDemo = useCallback(() => {
-    setData(seededData());
-    setStatuses({});
-    setProtectedInr(0);
+    const fresh = freshSession();
+    clearSaved();
+    setData(dataOf(fresh));
+    setStatuses(fresh.statuses);
+    setProtectedInr(fresh.protectedInr);
     setLastInjectedId(null);
-    setCampaignState(allCampaignsActive());
+    setCampaignState(fresh.campaignState);
     toast.success("Demo reset", { description: "Back to the 3 seeded incidents, all rules on, all campaigns active." });
   }, []);
 

@@ -65,8 +65,8 @@ export default function IncidentPage() {
       <div className="space-y-4">
         <BackLink />
         <div className="rounded-xl border border-slate-200 bg-white px-6 py-10 text-center">
-          <p className="font-semibold text-slate-900">This incident is no longer active</p>
-          <p className="mt-1 text-sm text-slate-500">It may have been cleared by a demo reset.</p>
+          <p className="font-semibold text-slate-900">This demo incident isn't in your current session.</p>
+          <p className="mt-1 text-sm text-slate-500">Re-create it from the inbox demo controls.</p>
         </div>
       </div>
     );

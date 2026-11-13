@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { ArrowLeft } from "lucide-react";
 import { cn } from "cn";
@@ -12,22 +12,49 @@ import {
 import { FailureClassIcon } from "@/components/alerts/FailureClassIcon";
 import { SeverityChip } from "@/components/alerts/SeverityChip";
 import { ActionRow } from "@/components/incident/ActionRow";
+import "@/components/incident/incident.css";
 import { CausalTreePanel } from "@/components/incident/CausalTreePanel";
 import { MetricBandChart } from "@/components/incident/MetricBandChart";
 import { TrackingBreakChart } from "@/components/incident/TrackingBreakChart";
 import { TrackingChecklistDialog } from "@/components/incident/TrackingChecklistDialog";
 import { buildCausalTree, diagnoseTree } from "@/lib/causalTree";
 import { alertWindowHours, bandSeries, trackingSeries } from "@/lib/chartData";
-import { CAMPAIGNS } from "@/lib/dataGenerator";
+import { CAMPAIGNS, demoNow } from "@/lib/dataGenerator";
+import type { AlertStatus } from "@/lib/types";
 import { useApp } from "@/state/appContext";
 import { startedAgo } from "@/state/inboxView";
-import {
-  actionsFor,
-  exposureStopped,
-  MARK_FIXED_ACTION,
-  TRACKING_CHECKLIST_ACTION,
-} from "@/state/protection";
-import { formatDateTime, formatInr } from "@/utils/format";
+import { exposureStopped, MARK_FIXED_ACTION, TRACKING_CHECKLIST_ACTION } from "@/state/protection";
+import { recommendationFor } from "@/state/recommendation";
+import { formatClockTime, formatDateTime, formatInr } from "@/utils/format";
+
+const HOUR = 3_600_000;
+
+/** Status line above the tiles, and the tiles' glow class, per status. */
+const STATUS_LINE: Partial<Record<AlertStatus, { text: string; cls: string; dot: string }>> = {
+  OPEN: { text: "Money at risk — no one has acted yet", cls: "text-red-700", dot: "bg-red-600" },
+  ACKED: { text: "Acknowledged — still costing money until fixed", cls: "text-amber-800", dot: "bg-amber-500" },
+  RESOLVED: { text: "Resolved", cls: "text-green-800", dot: "bg-green-600" },
+};
+const GLOW: Partial<Record<AlertStatus, string>> = {
+  OPEN: "bp-glow-open",
+  ACKED: "bp-glow-acked",
+  RESOLVED: "bp-glow-resolved",
+};
+
+/** true for ~1.5s after this alert's status changes to RESOLVED (not when it loads resolved). */
+function useResolvedFlash(alertId: string | undefined, status: AlertStatus): boolean {
+  const prev = useRef<{ id: string | undefined; status: AlertStatus }>({ id: alertId, status });
+  const [flash, setFlash] = useState(false);
+  useEffect(() => {
+    const was = prev.current;
+    prev.current = { id: alertId, status };
+    if (was.id !== alertId || was.status === status || status !== "RESOLVED") return;
+    setFlash(true);
+    const t = setTimeout(() => setFlash(false), 1500);
+    return () => clearTimeout(t);
+  }, [alertId, status]);
+  return flash;
+}
 
 function BackLink() {
   return (
@@ -39,9 +66,10 @@ function BackLink() {
 
 export default function IncidentPage() {
   const { id } = useParams();
-  const { history, alerts, statuses, applyAction } = useApp();
+  const { history, alerts, statuses, actionsTaken, applyAction } = useApp();
   const [checklistOpen, setChecklistOpen] = useState(false);
   const alert = alerts.find((a) => a.id === id);
+  const flash = useResolvedFlash(alert?.id, (alert && statuses[alert.id]) || "OPEN");
   const series = alert ? history[alert.campaignId] : undefined;
 
   const view = useMemo(() => {
@@ -74,6 +102,9 @@ export default function IncidentPage() {
 
   const status = statuses[alert.id] ?? "OPEN";
   const campaign = CAMPAIGNS.find((c) => c.id === alert.campaignId)?.name ?? alert.campaignId;
+  const line = STATUS_LINE[status];
+  const glow = cn(GLOW[status], status === "RESOLVED" && flash && "bp-glow-flash");
+  const tile = cn("rounded-lg border border-slate-200 bg-white px-3 py-2", glow);
 
   return (
     <div className="space-y-5">
@@ -98,16 +129,22 @@ export default function IncidentPage() {
             Affected campaign: <span className="font-medium text-slate-700">{campaign}</span>
           </p>
         </div>
+        {line && (
+          <p role="status" className={cn("flex items-center gap-2 text-sm font-medium", line.cls)}>
+            <span className={cn("size-2 shrink-0 rounded-full", line.dot)} aria-hidden />
+            {line.text}
+          </p>
+        )}
         <dl className="grid grid-cols-3 gap-2">
-          <div className="rounded-lg border border-slate-200 bg-white px-3 py-2">
+          <div className={tile}>
             <dt className="text-xs text-slate-500">At risk / hour</dt>
             <dd className="text-lg font-semibold text-slate-900 tabular-nums">{formatInr(alert.inrAtRiskPerHour)}</dd>
           </div>
-          <div className="rounded-lg border border-slate-200 bg-white px-3 py-2">
+          <div className={tile}>
             <dt className="text-xs text-slate-500">At risk so far</dt>
             <dd className="text-lg font-semibold text-slate-900 tabular-nums">{formatInr(alert.inrAtRiskTotal)}</dd>
           </div>
-          <div className="rounded-lg border border-slate-200 bg-white px-3 py-2">
+          <div className={tile}>
             <dt className="text-xs text-slate-500">Started</dt>
             <dd className="text-sm font-semibold text-slate-900">{startedAgo(alert.startedAt)}</dd>
             <dd className="text-xs text-slate-500">{formatDateTime(alert.startedAt)}</dd>
@@ -118,8 +155,11 @@ export default function IncidentPage() {
       </header>
 
       <ActionRow
-        actions={actionsFor(alert)}
+        recommendation={recommendationFor(alert)}
         status={status}
+        actionTaken={actionsTaken[alert.id]}
+        creditInr={exposureStopped(alert)}
+        actedAt={`${formatClockTime(demoNow() + HOUR)} IST`}
         onAction={(a) => {
           // The checklist acknowledges (no ₹ credit); "Mark fixed" inside it resolves.
           if (a === TRACKING_CHECKLIST_ACTION) setChecklistOpen(true);

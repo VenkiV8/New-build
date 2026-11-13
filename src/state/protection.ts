@@ -53,6 +53,16 @@ export function exposureStopped(alert: Alert): number {
   return Math.round(Math.min(uncapped, budget));
 }
 
+/**
+ * ₹ credited to "Protected this session" when `action` is taken on `alert`:
+ * the exposure stopped if the action resolves it (and it wasn't resolved before), else 0.
+ * Used by the provider for the credit AND by the recommendation for its prediction,
+ * so the number shown before the click equals the number credited after it.
+ */
+export function creditForAction(alert: Alert, action: string, prevStatus: AlertStatus | undefined): number {
+  return statusForAction(action) === "RESOLVED" && prevStatus !== "RESOLVED" ? exposureStopped(alert) : 0;
+}
+
 /** Acknowledged is not fixed: OPEN and ACKED are active; RESOLVED / EXPECTED / SNOOZED are closed. */
 export function isActive(status: AlertStatus | undefined): boolean {
   const s = status ?? "OPEN";

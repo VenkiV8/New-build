@@ -1,0 +1,60 @@
+/* Incident page, top section only (status tiles + recommended action).
+   Static end states are always on; motion lives inside prefers-reduced-motion: no-preference. */
+
+/* OPEN: red glow */
+.bp-glow-open {
+  box-shadow: 0 0 0 1px #fca5a5, 0 0 18px rgba(220, 38, 38, 0.25);
+}
+/* ACKED: steady amber glow */
+.bp-glow-acked {
+  box-shadow: 0 0 0 1px #fcd34d, 0 0 18px rgba(217, 119, 6, 0.22);
+}
+/* RESOLVED: calm settled state */
+.bp-glow-resolved {
+  box-shadow: 0 0 0 1px #bbf7d0;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  /* slow 2.4s pulse of the red glow intensity */
+  .bp-glow-open {
+    animation: bp-glow-pulse 2.4s ease-in-out infinite;
+  }
+  @keyframes bp-glow-pulse {
+    0%,
+    100% {
+      box-shadow: 0 0 0 1px #fca5a5, 0 0 18px rgba(220, 38, 38, 0.25);
+    }
+    50% {
+      box-shadow: 0 0 0 1px #fca5a5, 0 0 26px rgba(220, 38, 38, 0.42);
+    }
+  }
+
+  /* green flash on the transition to RESOLVED, settling over ~1.5s */
+  .bp-glow-resolved.bp-glow-flash {
+    animation: bp-resolve-flash 1.5s ease-out both;
+  }
+  @keyframes bp-resolve-flash {
+    0% {
+      box-shadow: 0 0 0 1px #86efac, 0 0 26px rgba(22, 163, 74, 0.45);
+    }
+    35% {
+      box-shadow: 0 0 0 1px #86efac, 0 0 18px rgba(22, 163, 74, 0.28);
+    }
+    100% {
+      box-shadow: 0 0 0 1px #bbf7d0, 0 0 0 rgba(22, 163, 74, 0);
+    }
+  }
+
+  /* one-time soft shine on the recommended button */
+  .bp-cta-shine {
+    animation: bp-cta-shine 1.4s ease-out 400ms 1 both;
+  }
+  @keyframes bp-cta-shine {
+    0% {
+      box-shadow: 0 0 0 0 rgba(37, 99, 235, 0.45);
+    }
+    100% {
+      box-shadow: 0 0 0 12px rgba(37, 99, 235, 0);
+    }
+  }
+}

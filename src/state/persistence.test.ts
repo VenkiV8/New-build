@@ -167,3 +167,18 @@ describe("tour progress persistence", () => {
     expect(storage.data.has(STORAGE_KEY)).toBe(false);
   });
 });
+
+describe("actions taken (incident success strip)", () => {
+  it("round-trips the action that closed each alert; drops ones whose alert is no longer closed", () => {
+    const s = busySession();
+    const resolvedId = Object.entries(s.statuses).find(([, v]) => v === "RESOLVED")![0];
+    const storage = memoryStorage();
+    persistSession({ ...s, actionsTaken: { [resolvedId]: "Cap today's budget", "c9-GHOST-1": "Pause campaign" } }, storage);
+    expect(loadSession(storage).actionsTaken).toEqual({ [resolvedId]: "Cap today's budget" });
+  });
+
+  it("a bad action value → fresh start", () => {
+    const storage = memoryStorage({ [STORAGE_KEY]: JSON.stringify({ ...serialize(busySession()), actions: { x: 42 } }) });
+    expect(loadSession(storage).injections).toHaveLength(0);
+  });
+});

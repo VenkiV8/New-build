@@ -16,6 +16,8 @@ export interface AppState {
   /** "Try this in 60 seconds" progress (persisted with the session; reset clears it) */
   tour: TourProgress;
   markTour: (step: TourStep) => void;
+  /** alertId → action that closed it (persisted), for the incident page success strip */
+  actionsTaken: Record<string, string>;
   /** apply a suggested action: sets the alert's status; fixes add to protectedInr */
   applyAction: (alertId: string, action: string) => void;
   inject: (failureClass: InjectableClass) => void;

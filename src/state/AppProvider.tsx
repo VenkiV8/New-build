@@ -10,7 +10,7 @@ import { clearSaved, freshSession, loadSession, persistSession, type DemoSession
 import { emptyTour, type TourProgress, type TourStep } from "./tour";
 import {
   campaignStateForAction,
-  exposureStopped,
+  creditForAction,
   hoursLeftToday,
   statusForAction,
   type CampaignState,
@@ -43,28 +43,33 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const [lastInjectedId, setLastInjectedId] = useState<string | null>(null);
   const [campaignState, setCampaignState] = useState<Record<string, CampaignState>>(boot.campaignState);
   const [tour, setTour] = useState<TourProgress>(boot.tour);
+  /** alertId → the action that closed it (Resolved / Snoozed / Expected), for the incident success strip */
+  const [actionsTaken, setActionsTaken] = useState<Record<string, string>>(boot.actionsTaken);
   const markTour = useCallback((step: TourStep) => setTour((t) => (t[step] ? t : { ...t, [step]: true })), []);
 
   // Save after every state change (inject, action, ack, rule toggle). A pristine
   // session is not stored, so after Reset the key is gone.
   useEffect(() => {
-    persistSession({ ...data, statuses, campaignState, protectedInr, tour });
-  }, [data, statuses, campaignState, protectedInr, tour]);
+    persistSession({ ...data, statuses, campaignState, protectedInr, tour, actionsTaken });
+  }, [data, statuses, campaignState, protectedInr, tour, actionsTaken]);
 
   const applyAction = useCallback(
     (alertId: string, action: string) => {
       const alert = data.alerts.find((a) => a.id === alertId);
       if (!alert) return;
       const next = statusForAction(action);
-      const wasResolved = statuses[alertId] === "RESOLVED";
+      // same rule the incident page uses for its "Saves ≈ ₹X" prediction
+      const credit = creditForAction(alert, action, statuses[alertId]);
       setStatuses((s) => ({ ...s, [alertId]: next }));
+      if (next === "RESOLVED" || next === "SNOOZED" || next === "EXPECTED") {
+        setActionsTaken((t) => ({ ...t, [alertId]: action }));
+      }
       // Pause campaign → paused, Cap today's budget → capped (shown on the inbox health chip)
       const effect = campaignStateForAction(action);
       if (effect) setCampaignState((c) => ({ ...c, [alert.campaignId]: effect }));
-      if (next === "RESOLVED" && !wasResolved) {
-        const stopped = exposureStopped(alert);
-        setProtectedInr((p) => p + stopped);
-        toast.success(`≈ ${formatInr(stopped)} of exposure stopped for the rest of today (${hoursLeftToday()} h)`, {
+      if (credit > 0) {
+        setProtectedInr((p) => p + credit);
+        toast.success(`≈ ${formatInr(credit)} of exposure stopped for the rest of today (${hoursLeftToday()} h)`, {
           description: `${action}: ${campaignName(alert.campaignId)}`,
         });
       } else if (next === "SNOOZED") {
@@ -111,6 +116,11 @@ export function AppProvider({ children }: { children: ReactNode }) {
           delete next[added.id];
           return next;
         });
+        setActionsTaken((t) => {
+          const next = { ...t };
+          delete next[added.id];
+          return next;
+        });
       }
       setLastInjectedId(added.id);
       markTour("injected");
@@ -140,6 +150,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     setLastInjectedId(null);
     setCampaignState(fresh.campaignState);
     setTour(emptyTour());
+    setActionsTaken(fresh.actionsTaken);
     toast.success("Demo reset", { description: "Back to the 3 seeded incidents, all rules on, all campaigns active." });
   }, []);
 
@@ -153,13 +164,14 @@ export function AppProvider({ children }: { children: ReactNode }) {
       campaignState,
       tour,
       markTour,
+      actionsTaken,
       applyAction,
       inject,
       lastInjectedId,
       setRuleEnabled,
       resetDemo,
     }),
-    [data, statuses, protectedInr, campaignState, tour, markTour, applyAction, inject, lastInjectedId, setRuleEnabled, resetDemo],
+    [data, statuses, protectedInr, campaignState, tour, markTour, actionsTaken, applyAction, inject, lastInjectedId, setRuleEnabled, resetDemo],
   );
 
   return <AppContext.Provider value={value}>{children}</AppContext.Provider>;

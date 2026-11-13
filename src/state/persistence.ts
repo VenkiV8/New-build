@@ -25,6 +25,8 @@ export interface SavedDemo {
   protectedInr: number;
   /** "Try this" tour progress (optional: older saves without it load with no steps done) */
   tour?: TourProgress;
+  /** alertId → the action that closed it (optional: older saves load without it) */
+  actions?: Record<string, string>;
 }
 
 /** Everything the app needs to run, rebuilt from a saved session (or fresh). */
@@ -37,13 +39,14 @@ export interface DemoSession {
   campaignState: Record<string, CampaignState>;
   protectedInr: number;
   tour: TourProgress;
+  actionsTaken: Record<string, string>;
 }
 
 const STATUSES: AlertStatus[] = ["OPEN", "ACKED", "RESOLVED", "SNOOZED", "EXPECTED"];
 const STATES: CampaignState[] = ["active", "paused", "capped"];
 const CAMPAIGN_IDS = CAMPAIGNS.map((c) => c.id);
 const RULE_CLASSES = DEFAULT_RULES.map((r) => r.failureClass);
-const SAVED_KEYS = ["v", "injections", "statuses", "campaignState", "rulesEnabled", "protectedInr", "tour"];
+const SAVED_KEYS = ["v", "injections", "statuses", "campaignState", "rulesEnabled", "protectedInr", "tour", "actions"];
 
 const isRecord = (x: unknown): x is Record<string, unknown> =>
   typeof x === "object" && x !== null && !Array.isArray(x);
@@ -61,6 +64,7 @@ export function freshSession(): DemoSession {
     campaignState: allCampaignsActive(),
     protectedInr: 0,
     tour: emptyTour(),
+    actionsTaken: {},
   };
 }
 
@@ -74,6 +78,7 @@ export function serialize(s: DemoSession): SavedDemo {
     rulesEnabled: Object.fromEntries(s.rules.map((r) => [r.failureClass, r.enabled])) as Record<FailureClass, boolean>,
     protectedInr: s.protectedInr,
     tour: { ...s.tour },
+    actions: { ...s.actionsTaken },
   };
 }
 
@@ -85,7 +90,8 @@ export function isPristine(s: DemoSession): boolean {
     Object.values(s.campaignState).every((c) => c === "active") &&
     s.rules.every((r) => r.enabled) &&
     s.protectedInr === 0 &&
-    TOUR_STEPS.every((k) => !s.tour[k])
+    TOUR_STEPS.every((k) => !s.tour[k]) &&
+    Object.keys(s.actionsTaken).length === 0
   );
 }
 
@@ -127,6 +133,13 @@ export function parseSaved(raw: string): SavedDemo {
     tour = { ...tour, ...(o.tour as Partial<TourProgress>) };
   }
 
+  let actions: Record<string, string> = {};
+  if (o.actions !== undefined) {
+    if (!isRecord(o.actions)) throw new Error("bad actions");
+    for (const v of Object.values(o.actions)) if (typeof v !== "string" || v.length > 80) throw new Error("bad action");
+    actions = o.actions as Record<string, string>;
+  }
+
   return {
     v: 1,
     injections,
@@ -135,6 +148,7 @@ export function parseSaved(raw: string): SavedDemo {
     rulesEnabled: o.rulesEnabled as Record<FailureClass, boolean>,
     protectedInr: o.protectedInr,
     tour,
+    actions,
   };
 }
 
@@ -159,6 +173,8 @@ export function rebuild(saved: SavedDemo): DemoSession {
     campaignState: { ...allCampaignsActive(), ...saved.campaignState },
     protectedInr: saved.protectedInr,
     tour: { ...emptyTour(), ...saved.tour },
+    // keep only actions for alerts that exist and are still closed by that action
+    actionsTaken: Object.fromEntries(Object.entries(saved.actions ?? {}).filter(([id]) => id in statuses)),
   };
 }
 

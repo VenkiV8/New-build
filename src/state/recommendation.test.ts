@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { generateSeededDemo } from "@/lib/dataGenerator";
 import { detectAll } from "@/lib/detector";
 import { creditForAction, MARK_FIXED_ACTION, statusForAction } from "./protection";
-import { RECOMMENDATION_REASON, recommendationFor } from "./recommendation";
+import { pastTenseFor, RECOMMENDATION_REASON, recommendationFor } from "./recommendation";
 
 const seeded = () => {
   const alerts = detectAll(generateSeededDemo());
@@ -45,5 +45,30 @@ describe("predicted saving = Protected credit", () => {
     expect(creditForAction(sr, "Snooze 24h", "OPEN")).toBe(0);
     expect(creditForAction(sr, "Mark expected (sale day)", "OPEN")).toBe(0);
     expect(creditForAction(sr, "Open tracking checklist", "OPEN")).toBe(0);
+  });
+});
+
+describe("pastTenseFor (success strip copy)", () => {
+  it("phrases each action in the past tense", () => {
+    expect(pastTenseFor("Cap today's budget")).toBe("Budget capped");
+    expect(pastTenseFor("Pause campaign")).toBe("Campaign paused");
+    expect(pastTenseFor("Mark fixed")).toBe("Tracking marked fixed");
+    expect(pastTenseFor("Rotate creative")).toBe("Creative rotation started");
+    expect(pastTenseFor("Fix billing / review status")).toBe("Billing/review flagged as fixed");
+    expect(pastTenseFor("Raise bid cap")).toBe("Bid cap raised");
+    expect(pastTenseFor("Spread budget with pacing")).toBe("Pacing enabled");
+    expect(pastTenseFor("Raise daily budget")).toBe("Daily budget raised");
+    expect(pastTenseFor("Snooze 24h")).toBe("Snoozed for 24 h");
+    expect(pastTenseFor("Mark expected (sale day)")).toBe("Marked as expected");
+    expect(pastTenseFor("Mark expected")).toBe("Marked as expected");
+    expect(pastTenseFor(undefined)).toBe("Resolved");
+  });
+
+  it("covers every action the detector suggests (no raw button labels leak through)", () => {
+    const actions = detectAll(generateSeededDemo()).flatMap((a) => a.suggestedActions);
+    for (const a of [...actions, "Review placements", "Ignore today", "Raise bid cap", "Spread budget with pacing", "Raise daily budget"]) {
+      if (a === "Open tracking checklist") continue; // acks, never closes → no strip
+      expect(pastTenseFor(a)).not.toBe("Resolved");
+    }
   });
 });

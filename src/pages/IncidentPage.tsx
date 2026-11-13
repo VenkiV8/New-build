@@ -19,15 +19,13 @@ import { TrackingBreakChart } from "@/components/incident/TrackingBreakChart";
 import { TrackingChecklistDialog } from "@/components/incident/TrackingChecklistDialog";
 import { buildCausalTree, diagnoseTree } from "@/lib/causalTree";
 import { alertWindowHours, bandSeries, trackingSeries } from "@/lib/chartData";
-import { CAMPAIGNS, demoNow } from "@/lib/dataGenerator";
+import { CAMPAIGNS } from "@/lib/dataGenerator";
 import type { AlertStatus } from "@/lib/types";
 import { useApp } from "@/state/appContext";
 import { startedAgo } from "@/state/inboxView";
 import { exposureStopped, MARK_FIXED_ACTION, TRACKING_CHECKLIST_ACTION } from "@/state/protection";
 import { recommendationFor } from "@/state/recommendation";
-import { formatClockTime, formatDateTime, formatInr } from "@/utils/format";
-
-const HOUR = 3_600_000;
+import { formatDateTime, formatInr } from "@/utils/format";
 
 /** Status line above the tiles, and the tiles' glow class, per status. */
 const STATUS_LINE: Partial<Record<AlertStatus, { text: string; cls: string; dot: string }>> = {
@@ -159,7 +157,6 @@ export default function IncidentPage() {
         status={status}
         actionTaken={actionsTaken[alert.id]}
         creditInr={exposureStopped(alert)}
-        actedAt={`${formatClockTime(demoNow() + HOUR)} IST`}
         onAction={(a) => {
           // The checklist acknowledges (no ₹ credit); "Mark fixed" inside it resolves.
           if (a === TRACKING_CHECKLIST_ACTION) setChecklistOpen(true);

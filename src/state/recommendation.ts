@@ -11,6 +11,27 @@ export const RECOMMENDATION_REASON: Record<FailureClass, string> = {
   BUDGET_EXHAUST: "Pacing spreads the remaining budget across the hours that convert.",
 };
 
+/**
+ * Past-tense phrasing of an action for the incident success strip
+ * (e.g. "Cap today's budget" → "Budget capped").
+ */
+export function pastTenseFor(action: string | undefined): string {
+  const a = (action ?? "").toLowerCase();
+  if (a.startsWith("cap today")) return "Budget capped";
+  if (a.startsWith("pause")) return "Campaign paused";
+  if (a.startsWith("mark fixed")) return "Tracking marked fixed";
+  if (a.startsWith("rotate creative")) return "Creative rotation started";
+  if (a.startsWith("fix billing")) return "Billing/review flagged as fixed";
+  if (a.startsWith("raise bid cap")) return "Bid cap raised";
+  if (a.startsWith("spread budget")) return "Pacing enabled";
+  if (a.startsWith("raise daily budget")) return "Daily budget raised";
+  if (a.startsWith("review placements")) return "Placement review started";
+  if (a.startsWith("snooze")) return "Snoozed for 24 h";
+  if (a.startsWith("mark expected")) return "Marked as expected";
+  if (a.startsWith("ignore")) return "Ignored for today";
+  return "Resolved";
+}
+
 export interface Recommendation {
   /** alert.suggestedActions[0] */
   action: string;

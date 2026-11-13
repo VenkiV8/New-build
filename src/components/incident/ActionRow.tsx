@@ -11,7 +11,7 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import type { AlertStatus } from "@/lib/types";
-import type { Recommendation } from "@/state/recommendation";
+import { pastTenseFor, type Recommendation } from "@/state/recommendation";
 import { formatInr } from "@/utils/format";
 
 /** Icon for the recommended action button. */
@@ -33,15 +33,13 @@ interface Props {
   actionTaken: string | undefined;
   /** ₹ credited when it was resolved (same helper as the prediction) */
   creditInr: number;
-  /** end of the last data hour, e.g. "9:00 PM IST" */
-  actedAt: string;
   onAction: (action: string) => void;
 }
 
 const POLICY =
   "Automation policy: only a SEV1 spend runaway can auto-pause (if no one acknowledges it within 30 min). Every other action needs one human tap, because a wrong auto-pause on a flagship campaign costs more than the anomaly.";
 
-export function ActionRow({ recommendation: rec, status, actionTaken, creditInr, actedAt, onAction }: Props) {
+export function ActionRow({ recommendation: rec, status, actionTaken, creditInr, onAction }: Props) {
   // Acked is not closed: the row stays (e.g. reopen the tracking checklist, then Mark fixed).
   const closed = status === "RESOLVED" || status === "SNOOZED" || status === "EXPECTED";
 
@@ -55,7 +53,7 @@ export function ActionRow({ recommendation: rec, status, actionTaken, creditInr,
           >
             <CircleCheck className="mt-0.5 size-4 shrink-0 text-green-700" aria-hidden />
             <span>
-              {actionTaken ?? "Resolved"} by you at {actedAt} ·{" "}
+              {pastTenseFor(actionTaken)} by you just now ·{" "}
               <span className="tabular-nums">≈ {formatInr(creditInr)}</span> exposure stopped for the rest of today
             </span>
           </p>
@@ -70,7 +68,7 @@ export function ActionRow({ recommendation: rec, status, actionTaken, creditInr,
               <CalendarCheck className="mt-0.5 size-4 shrink-0 text-slate-500" aria-hidden />
             )}
             <span>
-              {actionTaken ?? (status === "SNOOZED" ? "Snoozed" : "Marked expected")} at {actedAt}
+              {actionTaken ? pastTenseFor(actionTaken) : status === "SNOOZED" ? "Snoozed for 24 h" : "Marked as expected"} just now
             </span>
           </p>
         )
